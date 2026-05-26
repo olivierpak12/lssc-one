@@ -7,11 +7,21 @@ export default defineSchema({
     password: v.string(),
     transactionPassword: v.string(),
     invitationCode: v.string(),
+    myInviteCode: v.optional(v.string()),
     role: v.optional(v.union(v.literal("user"), v.literal("admin"))),
     emailVerified: v.boolean(),
     externalId: v.optional(v.string()), 
     createdAt: v.number(),
-  }).index("by_email", ["email"]).index("by_externalId", ["externalId"]),
+    teamRewardsBalance: v.optional(v.string()),
+    teamRewardsTotalEarned: v.optional(v.string()),
+  }).index("by_email", ["email"]).index("by_externalId", ["externalId"]).index("by_inviteCode", ["myInviteCode"]),
+
+  referralTree: defineTable({
+    referrerId: v.id("users"),
+    referredId: v.id("users"),
+    tier: v.number(),
+    createdAt: v.number(),
+  }).index("by_referrer", ["referrerId"]).index("by_referred", ["referredId"]),
 
   wallets: defineTable({
     userId: v.id("users"),
@@ -82,4 +92,19 @@ export default defineSchema({
     key: v.string(),
     value: v.string(),
   }).index("by_key", ["key"]),
+
+  passwordResetTokens: defineTable({
+    email: v.string(),
+    token: v.string(),
+    expiresAt: v.number(),
+    used: v.boolean(),
+  }).index("by_token", ["token"]).index("by_email", ["email"]),
+
+  transactionPasswordResetTokens: defineTable({
+    userId: v.id("users"),
+    email: v.string(),
+    token: v.string(),
+    expiresAt: v.number(),
+    used: v.boolean(),
+  }).index("by_token", ["token"]).index("by_email", ["email"]),
 });

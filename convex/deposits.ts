@@ -1,5 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { api } from "./_generated/api";
 
 export const listDeposits = query({
   args: { userId: v.id("users") },
@@ -84,6 +85,13 @@ export const updateStatus = mutation({
           updatedAt: Date.now(),
         });
       }
+
+      // Trigger team rewards
+      await ctx.scheduler.runAfter(0, api.teams.processDepositRewards, {
+        depositId: args.depositId,
+        userId: deposit.userId,
+        amount: deposit.amount,
+      });
     }
   },
 });

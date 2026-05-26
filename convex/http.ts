@@ -38,6 +38,12 @@ http.route({ path: "/run/deposits:listDeposits", method: "OPTIONS", handler: htt
 http.route({ path: "/mutation/withdrawals:requestWithdrawal", method: "OPTIONS", handler: httpAction(async () => corsResponse()) });
 http.route({ path: "/action/etherscanActions:syncUserDeposits", method: "OPTIONS", handler: httpAction(async () => corsResponse()) });
 http.route({ path: "/run/admin:getStats", method: "OPTIONS", handler: httpAction(async () => corsResponse()) });
+http.route({ path: "/run/teams:getTeamStats", method: "OPTIONS", handler: httpAction(async () => corsResponse()) });
+http.route({ path: "/mutation/bikes:buyBike", method: "OPTIONS", handler: httpAction(async () => corsResponse()) });
+http.route({ path: "/mutation/users:requestPasswordReset", method: "OPTIONS", handler: httpAction(async () => corsResponse()) });
+http.route({ path: "/mutation/users:resetPassword", method: "OPTIONS", handler: httpAction(async () => corsResponse()) });
+http.route({ path: "/mutation/users:requestTransactionPasswordReset", method: "OPTIONS", handler: httpAction(async () => corsResponse()) });
+http.route({ path: "/mutation/users:resetTransactionPassword", method: "OPTIONS", handler: httpAction(async () => corsResponse()) });
 
 // --- Auth Routes ---
 
@@ -121,6 +127,66 @@ http.route({
     const body = await request.json();
     await ctx.runMutation(api.users.verifyEmail, body);
     return new Response(null, { status: 200, headers: CORS_HEADERS });
+  }),
+});
+
+http.route({
+  path: "/mutation/users:requestPasswordReset",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const body = await request.json();
+    const appUrl = request.headers.get("Origin") || "http://localhost:5199";
+    try {
+      const { email, token } = await ctx.runMutation(api.resetPassword.requestPasswordReset, { email: body.email });
+      await ctx.runAction(api.resetPassword.sendPasswordResetEmail, { email, token, appUrl });
+      return jsonResponse({ message: "If the email exists, a reset link has been sent." });
+    } catch (e: any) {
+      return jsonResponse({ message: "If the email exists, a reset link has been sent." });
+    }
+  }),
+});
+
+http.route({
+  path: "/mutation/users:resetPassword",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const body = await request.json();
+    try {
+      await ctx.runMutation(api.resetPassword.resetPassword, { token: body.token, newPassword: body.newPassword });
+      return jsonResponse({ success: true });
+    } catch (e: any) {
+      return jsonResponse(e.message, 400);
+    }
+  }),
+});
+
+http.route({
+  path: "/mutation/users:requestTransactionPasswordReset",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const body = await request.json();
+    const appUrl = request.headers.get("Origin") || "http://localhost:5199";
+    try {
+      const { email, token } = await ctx.runMutation(api.resetPassword.requestTransactionPasswordReset, { email: body.email });
+      await ctx.runAction(api.resetPassword.sendTransactionPasswordResetEmail, { email, token, appUrl });
+      return jsonResponse({ message: "If the email exists, a reset link has been sent." });
+    } catch (e: any) {
+      return jsonResponse({ message: "If the email exists, a reset link has been sent." });
+    }
+  }),
+});
+
+http.route({
+  path: "/mutation/users:resetTransactionPassword",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const body = await request.json();
+    try {
+      await ctx.runMutation(api.resetPassword.resetTransactionPassword, { token: body.token, newPassword: body.newPassword });
+      return jsonResponse({ success: true });
+    } catch (e: any) {
+      return jsonResponse(e.message, 400);
+    }
   }),
 });
 
@@ -215,6 +281,33 @@ http.route({
   handler: httpAction(async (ctx) => {
     const result = await ctx.runQuery(api.admin.getStats);
     return jsonResponse(result);
+  }),
+});
+
+http.route({
+  path: "/run/teams:getTeamStats",
+  method: "GET",
+  handler: httpAction(async (ctx, request) => {
+    const { searchParams } = new URL(request.url);
+    const userId = searchParams.get("userId");
+    const period = searchParams.get("period") || "today";
+    if (!userId) return jsonResponse("Missing userId", 400);
+    const result = await ctx.runQuery(api.teams.getTeamStats, { userId: userId as any, period: period as any });
+    return jsonResponse(result);
+  }),
+});
+
+http.route({
+  path: "/mutation/bikes:buyBike",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const body = await request.json();
+    try {
+      const result = await ctx.runMutation(api.bikes.buyBike, body);
+      return jsonResponse(result);
+    } catch (e: any) {
+      return jsonResponse(e.message, 400);
+    }
   }),
 });
 

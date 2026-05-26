@@ -12,6 +12,9 @@ class AuthState {
   final String? error;
   final bool skippedVerification;
   final bool sessionRestored;
+  final String? teamRewardsBalance;
+  final String? teamRewardsTotalEarned;
+  final String? myInviteCode;
 
   AuthState({
     this.userId,
@@ -22,6 +25,9 @@ class AuthState {
     this.error,
     this.skippedVerification = false,
     this.sessionRestored = false,
+    this.teamRewardsBalance,
+    this.teamRewardsTotalEarned,
+    this.myInviteCode,
   });
 
   bool get isAdmin => role == 'admin';
@@ -35,6 +41,9 @@ class AuthState {
     String? error,
     bool? skippedVerification,
     bool? sessionRestored,
+    String? teamRewardsBalance,
+    String? teamRewardsTotalEarned,
+    String? myInviteCode,
   }) {
     return AuthState(
       userId: userId ?? this.userId,
@@ -45,6 +54,9 @@ class AuthState {
       error: error,
       skippedVerification: skippedVerification ?? this.skippedVerification,
       sessionRestored: sessionRestored ?? this.sessionRestored,
+      teamRewardsBalance: teamRewardsBalance,
+      teamRewardsTotalEarned: teamRewardsTotalEarned,
+      myInviteCode: myInviteCode,
     );
   }
 }
@@ -91,12 +103,23 @@ class AuthNotifier extends StateNotifier<AuthState> {
       if (userData != null) {
         final newRole = userData['role'] ?? 'user';
         final isVerified = userData['emailVerified'] ?? false;
+        final rewardsBalance = userData['teamRewardsBalance'] ?? "0";
+        final rewardsTotal = userData['teamRewardsTotalEarned'] ?? "0";
+        final inviteCode = userData['myInviteCode'] as String?;
 
-        if (newRole != state.role || isVerified != state.isEmailVerified) {
+        if (newRole != state.role || isVerified != state.isEmailVerified ||
+            rewardsBalance != state.teamRewardsBalance || rewardsTotal != state.teamRewardsTotalEarned ||
+            inviteCode != state.myInviteCode) {
           final prefs = await SharedPreferences.getInstance();
           await prefs.setString('role', newRole);
           await prefs.setBool('emailVerified', isVerified);
-          state = state.copyWith(role: newRole, isEmailVerified: isVerified);
+          state = state.copyWith(
+            role: newRole, 
+            isEmailVerified: isVerified,
+            teamRewardsBalance: rewardsBalance,
+            teamRewardsTotalEarned: rewardsTotal,
+            myInviteCode: inviteCode,
+          );
         }
       }
     } catch (e) {

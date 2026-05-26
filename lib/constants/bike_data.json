@@ -1,0 +1,70 @@
+{
+  "bikes": [
+    {
+      "id": "beginner",
+      "name": "Beginner period",
+      "equipmentPrice": 17.00,
+      "dailyIncome": 1.90
+    },
+    {
+      "id": "blue_s1",
+      "name": "BLUE-S1",
+      "equipmentPrice": 57.00,
+      "dailyIncome": 6.30
+    },
+    {
+      "id": "blue_s2",
+      "name": "BLUE-S2",
+      "equipmentPrice": 277.00,
+      "dailyIncome": 31.00
+    },
+    {
+      "id": "blue_s3",
+      "name": "BLUE-S3",
+      "equipmentPrice": 677.00,
+      "dailyIncome": 80.00
+    },
+    {
+      "id": "blue_s4",
+      "name": "BLUE-S4",
+      "equipmentPrice": 1166.00,
+      "dailyIncome": 138.00
+    },
+    {
+      "id": "blue_s5",
+      "name": "BLUE-S5",
+      "equipmentPrice": 2266.00,
+      "dailyIncome": 268.00
+    },
+    {
+      "id": "blue_s6",
+      "name": "BLUE-S6",
+      "equipmentPrice": 4466.00,
+      "dailyIncome": 548.00
+    },
+    {
+      "id": "blue_s7",
+      "name": "BLUE-S7",
+      "equipmentPrice": 7766.00,
+      "dailyIncome": 955.00
+    },
+    {
+      "id": "blue_s8",
+      "name": "BLUE-S8",
+      "equipmentPrice": 16888.00,
+      "dailyIncome": 2046.00
+    },
+    {
+      "id": "blue_s9",
+      "name": "BLUE-S9",
+      "equipmentPrice": 22888.00,
+      "dailyIncome": 2858.00
+    },
+    {
+      "id": "blue_s10",
+      "name": "BLUE-S10",
+      "equipmentPrice": 36888.00,
+      "dailyIncome": 4606.00
+    }
+  ]
+}

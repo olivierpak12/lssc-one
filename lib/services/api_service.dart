@@ -1,13 +1,25 @@
 import 'package:dio/dio.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class ApiService {
   final Dio _dio = Dio();
-  
-  final String baseUrl = "https://tangible-rabbit-981.eu-west-1.convex.site";
 
-  ApiService() {
+  final String baseUrl;
+
+  ApiService() : baseUrl = _getConvexUrl() {
     _dio.options.baseUrl = baseUrl;
+  }
+
+  static String _getConvexUrl() {
+    final url = dotenv.env['CONVEX_SITE_URL'];
+    if (url == null || url.isEmpty) {
+      throw ArgumentError(
+        'CONVEX_SITE_URL not found in .env file. '
+        'Make sure your .env file contains: CONVEX_SITE_URL=https://quick-rooster-999.convex.site',
+      );
+    }
+    return url;
   }
 
   // --- Auth Methods ---
@@ -88,6 +100,55 @@ class ApiService {
 
   Future<Response> syncDeposits(String userId) async {
     return await _dio.post('/action/etherscanActions:syncUserDeposits', data: {'userId': userId});
+  }
+
+  // --- Bike Methods ---
+
+  Future<Response> buyBike(String userId, String bikeId, String amount) async {
+    return await _dio.post('/mutation/bikes:buyBike', data: {
+      'userId': userId,
+      'bikeId': bikeId,
+      'amount': amount,
+    });
+  }
+
+  // --- Password Reset Methods ---
+
+  Future<Response> requestPasswordReset(String email) async {
+    return await _dio.post('/mutation/users:requestPasswordReset', data: {
+      'email': email,
+    });
+  }
+
+  Future<Response> resetPassword(String token, String newPassword) async {
+    return await _dio.post('/mutation/users:resetPassword', data: {
+      'token': token,
+      'newPassword': newPassword,
+    });
+  }
+
+  // --- Transaction Password Reset Methods ---
+
+  Future<Response> requestTransactionPasswordReset(String email) async {
+    return await _dio.post('/mutation/users:requestTransactionPasswordReset', data: {
+      'email': email,
+    });
+  }
+
+  Future<Response> resetTransactionPassword(String token, String newPassword) async {
+    return await _dio.post('/mutation/users:resetTransactionPassword', data: {
+      'token': token,
+      'newPassword': newPassword,
+    });
+  }
+
+  // --- Team Methods ---
+
+  Future<Response> getTeamStats(String userId, String period) async {
+    return await _dio.get('/run/teams:getTeamStats', queryParameters: {
+      'userId': userId,
+      'period': period,
+    });
   }
 }
 

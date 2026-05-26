@@ -4,7 +4,9 @@
   "description": "Backend services and Convex functions for CryptoVault Pro",
   "main": "index.js",
   "scripts": {
-    "dev": "flutter run -d chrome ",
+    "dev": "flutter run -d chrome",
+    "flutter": "flutter run -d chrome",
+    "convex": "npx convex dev",
     "web": "flutter run -d chrome",
     "web:release": "flutter run -d chrome --release",
     "web:build": "flutter build web",
