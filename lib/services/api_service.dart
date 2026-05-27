@@ -142,6 +142,12 @@ class ApiService {
     });
   }
 
+  // --- Purchases Methods ---
+
+  Future<Response> getUserPurchases(String userId) async {
+    return await _dio.get('/run/bikes:getUserPurchases', queryParameters: {'userId': userId});
+  }
+
   // --- Team Methods ---
 
   Future<Response> getTeamStats(String userId, String period) async {

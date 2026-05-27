@@ -12,6 +12,7 @@ import 'providers/wallet_provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/admin_provider.dart';
 import 'providers/team_provider.dart';
+import 'providers/purchases_provider.dart';
 import 'services/api_service.dart';
 
 void main() async {
@@ -237,14 +238,359 @@ class MainShell extends StatelessWidget {
   }
 }
 
-// --- Placeholder screens for Level, Bike, Team ---
-class LevelScreen extends StatelessWidget {
+// --- Level Screen ---
+class LevelScreen extends ConsumerWidget {
   const LevelScreen({super.key});
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final purchasesAsync = ref.watch(purchasesProvider);
+
     return Scaffold(
-      appBar: AppBar(title: const Text('LEVEL PROGRESS')),
-      body: const Center(child: Text('Level & progress tracking coming soon', style: TextStyle(color: Colors.white54))),
+      appBar: AppBar(
+        title: Container(
+          alignment: Alignment.center,
+          child: Column(
+            children: [
+              Text(
+                'MY EARNINGS',
+                style: GoogleFonts.poppins(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 24,
+                  color: Colors.white,
+                  letterSpacing: 1.2,
+                ),
+              ),
+              Text(
+                'Daily Profit Overview',
+                style: GoogleFonts.poppins(
+                  fontWeight: FontWeight.w400,
+                  fontSize: 12,
+                  color: Colors.grey[400],
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ],
+          ),
+        ),
+        centerTitle: true,
+        elevation: 0.5,
+        backgroundColor: const Color(0xFF0F0F0F),
+        shadowColor: const Color(0xFF00C853).withValues(alpha: 0.3),
+      ),
+      backgroundColor: const Color(0xFF0A0A0A),
+      body: purchasesAsync.when(
+        data: (purchases) {
+          if (purchases.isEmpty) {
+            return _buildEmptyState(context);
+          }
+          return _buildPurchasesList(context, purchases);
+        },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, _) => Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.cloud_off, size: 48, color: Colors.grey[600]),
+                const SizedBox(height: 16),
+                Text(
+                  'Could not load your earnings',
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    color: Colors.white54,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(40),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 100,
+              height: 100,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: const Color(0xFF00C853).withValues(alpha: 0.1),
+                border: Border.all(
+                  color: const Color(0xFF00C853).withValues(alpha: 0.3),
+                  width: 2,
+                ),
+              ),
+              child: const Icon(
+                Icons.shopping_bag_outlined,
+                size: 48,
+                color: Color(0xFF00C853),
+              ),
+            ),
+            const SizedBox(height: 28),
+            Text(
+              'No Packages Yet',
+              style: GoogleFonts.poppins(
+                fontSize: 22,
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Purchase a bike package to start\ngenerating daily earnings!',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                color: Colors.grey[400],
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 32),
+            ElevatedButton.icon(
+              onPressed: () => context.push('/bike'),
+              icon: const Icon(Icons.directions_bike_rounded, size: 20),
+              label: Text(
+                'Go to Shop',
+                style: GoogleFonts.poppins(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 14,
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF00C853),
+                foregroundColor: Colors.black,
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPurchasesList(BuildContext context, List<Map<String, dynamic>> purchases) {
+    double totalDaily = 0;
+    double totalInvestment = 0;
+
+    for (final p in purchases) {
+      totalDaily += (p['dailyIncome'] as num?)?.toDouble() ?? 0;
+      totalInvestment += (p['equipmentPrice'] as num?)?.toDouble() ?? 0;
+    }
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildSummaryCard(totalInvestment, totalDaily),
+          const SizedBox(height: 24),
+          Text(
+            'Your Packages',
+            style: GoogleFonts.poppins(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 12),
+          ...purchases.map((p) => _buildPurchaseCard(p, context)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSummaryCard(double totalInvestment, double totalDaily) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            const Color(0xFF00C853).withValues(alpha: 0.15),
+            const Color(0xFF00C853).withValues(alpha: 0.05),
+          ],
+        ),
+        border: Border.all(
+          color: const Color(0xFF00C853).withValues(alpha: 0.4),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF00C853).withValues(alpha: 0.15),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(20),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          _buildStatItem(
+            icon: Icons.monetization_on_outlined,
+            label: 'Total Investment',
+            value: '\$${totalInvestment.toStringAsFixed(2)}',
+          ),
+          Container(
+            width: 1,
+            height: 60,
+            color: const Color(0xFF00C853).withValues(alpha: 0.3),
+          ),
+          _buildStatItem(
+            icon: Icons.trending_up_rounded,
+            label: 'Daily Profit',
+            value: '\$${totalDaily.toStringAsFixed(2)}',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatItem({
+    required IconData icon,
+    required String label,
+    required String value,
+  }) {
+    return Column(
+      children: [
+        Icon(icon, size: 24, color: const Color(0xFF00C853)),
+        const SizedBox(height: 8),
+        Text(
+          label,
+          style: GoogleFonts.poppins(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: Colors.grey[400],
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          value,
+          style: GoogleFonts.poppins(
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+            color: const Color(0xFF00C853),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPurchaseCard(Map<String, dynamic> purchase, BuildContext context) {
+    final name = purchase['bikeName'] as String? ?? 'Package';
+    final price = (purchase['equipmentPrice'] as num?)?.toDouble() ?? 0;
+    final daily = (purchase['dailyIncome'] as num?)?.toDouble() ?? 0;
+    final monthly = daily * 30;
+    final purchasedAt = (purchase['purchasedAt'] as num?)?.toDouble() ?? 0;
+    final date = purchasedAt > 0
+        ? DateTime.fromMillisecondsSinceEpoch(purchasedAt.toInt())
+        : null;
+    final dateStr = date != null
+        ? '${date.month}/${date.day}/${date.year}'
+        : '';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        color: const Color(0xFF1E1E1E),
+        border: Border.all(
+          color: const Color(0xFF00C853).withValues(alpha: 0.15),
+          width: 1.5,
+        ),
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: const Color(0xFF00C853).withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(
+              Icons.directions_bike_rounded,
+              color: Color(0xFF00C853),
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Invested: \$${price.toStringAsFixed(0)}',
+                  style: GoogleFonts.poppins(
+                    fontSize: 11,
+                    color: Colors.grey[500],
+                  ),
+                ),
+                if (dateStr.isNotEmpty)
+                  Text(
+                    'Purchased: $dateStr',
+                    style: GoogleFonts.poppins(
+                      fontSize: 10,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                  '+\$${daily.toStringAsFixed(2)}',
+                style: GoogleFonts.poppins(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF00C853),
+                ),
+              ),
+              Text(
+                '/day',
+                style: GoogleFonts.poppins(
+                  fontSize: 10,
+                  color: Colors.grey[500],
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                '\$${monthly.toStringAsFixed(2)}/mo',
+                style: GoogleFonts.poppins(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.grey[400],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

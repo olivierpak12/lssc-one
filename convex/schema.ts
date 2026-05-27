@@ -107,4 +107,13 @@ export default defineSchema({
     expiresAt: v.number(),
     used: v.boolean(),
   }).index("by_token", ["token"]).index("by_email", ["email"]),
+
+  purchases: defineTable({
+    userId: v.id("users"),
+    bikeId: v.string(),
+    bikeName: v.string(),
+    equipmentPrice: v.number(),
+    dailyIncome: v.number(),
+    purchasedAt: v.number(),
+  }).index("by_userId", ["userId"]),
 });
