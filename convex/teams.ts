@@ -2,8 +2,8 @@ import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
 const TIER_PERCENTAGES: Record<number, number> = {
-  1: 19,
-  2: 4,
+  1: 18,
+  2: 3,
   3: 2,
 };
 

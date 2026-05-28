@@ -38,10 +38,16 @@ export const checkReferralCode = query({
   args: { code: v.string() },
   handler: async (ctx, args) => {
     if (!args.code || args.code.trim() === "") return { isValid: false };
-    const inviter = await ctx.db
+    let inviter = await ctx.db
       .query("users")
       .withIndex("by_referralCode", (q) => q.eq("referralCode", args.code))
       .unique();
+    if (!inviter) {
+      inviter = await ctx.db
+        .query("users")
+        .withIndex("by_inviteCode", (q) => q.eq("myInviteCode", args.code))
+        .unique();
+    }
     return { 
       isValid: !!inviter,
       username: inviter?.username || inviter?.email.split('@')[0]
@@ -103,10 +109,16 @@ export const register = mutation({
 
     let referredBy: Id<"users"> | undefined;
     if (args.invitationCode && args.invitationCode.trim() !== "") {
-      const inviter = await ctx.db
+      let inviter = await ctx.db
         .query("users")
         .withIndex("by_referralCode", (q) => q.eq("referralCode", args.invitationCode))
         .unique();
+      if (!inviter) {
+        inviter = await ctx.db
+          .query("users")
+          .withIndex("by_inviteCode", (q) => q.eq("myInviteCode", args.invitationCode))
+          .unique();
+      }
       if (!inviter) {
         throw new Error("Invalid invitation code. Please provide a valid referral code to continue.");
       }

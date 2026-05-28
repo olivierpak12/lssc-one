@@ -16,8 +16,10 @@ import 'providers/auth_provider.dart';
 import 'providers/admin_provider.dart';
 import 'providers/team_provider.dart';
 import 'providers/purchases_provider.dart';
+import 'providers/referral_provider.dart';
+import 'models/referral.dart';
 import 'services/api_service.dart';
-import 'screens/referral_screens.dart';
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -46,6 +48,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     refreshListenable: GoRouterRefreshStream(authNotifier.stream),
     routes: [
       GoRoute(path: '/login', builder: (context, state) => const AuthScreen()),
+      GoRoute(path: '/register', builder: (context, state) => const AuthScreen()),
       GoRoute(path: '/verify-email', builder: (context, state) => const VerifyEmailScreen()),
       GoRoute(path: '/forgot-password', builder: (context, state) => const ForgotPasswordScreen()),
       GoRoute(path: '/reset-password', builder: (context, state) {
@@ -60,7 +63,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state, child) => MainShell(child: child),
         routes: [
           GoRoute(path: '/', builder: (context, state) => const DashboardScreen()),
-          GoRoute(path: '/level', builder: (context, state) => const LevelScreen()),
+          GoRoute(path: '/earnings', builder: (context, state) => const EarningsScreen()),
           GoRoute(path: '/bike', builder: (context, state) => const BikeScreen()),
           GoRoute(path: '/team', builder: (context, state) => const TeamScreen()),
           GoRoute(path: '/my', builder: (context, state) => const SettingsScreen()),
@@ -79,6 +82,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (!auth.sessionRestored) return null;
 
       final isLoggingIn = path == '/login';
+      final isRegister = path == '/register';
       final isVerifying = path == '/verify-email';
       final isForgotPassword = path == '/forgot-password';
       final isResetPassword = path == '/reset-password';
@@ -86,12 +90,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isAdminPage = path.startsWith('/admin');
 
       if (auth.userId == null) {
-        return (isLoggingIn || isForgotPassword || isResetPassword || isResetTransPassword) ? null : '/login';
+        return (isLoggingIn || isRegister || isForgotPassword || isResetPassword || isResetTransPassword) ? null : '/login';
       }
 
       if (isAdminPage && !auth.isAdmin) return '/';
 
-      if (isLoggingIn || isVerifying || isForgotPassword || isResetPassword || isResetTransPassword) return '/';
+      if (isLoggingIn || isRegister || isVerifying || isForgotPassword || isResetPassword || isResetTransPassword) return '/';
       
       return null;
     },
@@ -166,7 +170,7 @@ class MainShell extends StatelessWidget {
 
   static const _navItems = [
     ('/', Icons.home_rounded, 'Home'),
-    ('/level', Icons.auto_graph_rounded, 'Level'),
+    ('/earnings', Icons.auto_graph_rounded, 'Earnings'),
     ('/bike', Icons.directions_bike_rounded, 'Bike'),
     ('/team', Icons.people_rounded, 'Team'),
     ('/my', Icons.person_rounded, 'My'),
@@ -242,13 +246,46 @@ class MainShell extends StatelessWidget {
   }
 }
 
-// --- Level Screen ---
-class LevelScreen extends ConsumerWidget {
-  const LevelScreen({super.key});
+// --- Earnings Screen ---
+class EarningsScreen extends ConsumerStatefulWidget {
+  const EarningsScreen({super.key});
+  @override
+  ConsumerState<EarningsScreen> createState() => _EarningsScreenState();
+}
+
+class _EarningsScreenState extends ConsumerState<EarningsScreen>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final purchasesAsync = ref.watch(purchasesProvider);
+    final referralStatsAsync = ref.watch(referralStatsProvider);
+
+    final purchases = purchasesAsync.asData?.value ?? [];
+    final referralStats = referralStatsAsync.asData?.value;
+
+    double totalDailyProfit = 0;
+    double totalInvestment = 0;
+    for (final p in purchases) {
+      totalDailyProfit += (p['dailyIncome'] as num?)?.toDouble() ?? 0;
+      totalInvestment += (p['equipmentPrice'] as num?)?.toDouble() ?? 0;
+    }
+
+    final referralBalance = referralStats?.referralBalance ?? 0;
+    final totalReferralEarnings = referralStats?.totalReferralEarnings ?? 0;
 
     return Scaffold(
       appBar: AppBar(
@@ -266,7 +303,7 @@ class LevelScreen extends ConsumerWidget {
                 ),
               ),
               Text(
-                'Daily Profit Overview',
+                'Your income overview',
                 style: GoogleFonts.poppins(
                   fontWeight: FontWeight.w400,
                   fontSize: 12,
@@ -283,39 +320,163 @@ class LevelScreen extends ConsumerWidget {
         shadowColor: const Color(0xFF00C853).withValues(alpha: 0.3),
       ),
       backgroundColor: const Color(0xFF0A0A0A),
-      body: purchasesAsync.when(
-        data: (purchases) {
-          if (purchases.isEmpty) {
-            return _buildEmptyState(context);
-          }
-          return _buildPurchasesList(context, purchases);
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(
-          child: Padding(
-            padding: const EdgeInsets.all(32),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
+      body: Column(
+        children: [
+          _buildCombinedSummary(
+            totalInvestment,
+            totalDailyProfit,
+            referralBalance,
+            totalReferralEarnings,
+          ),
+          TabBar(
+            controller: _tabController,
+            indicatorColor: const Color(0xFF00C853),
+            labelColor: const Color(0xFF00C853),
+            unselectedLabelColor: Colors.white54,
+            labelStyle: GoogleFonts.poppins(
+              fontWeight: FontWeight.w600,
+              fontSize: 13,
+            ),
+            unselectedLabelStyle: GoogleFonts.poppins(
+              fontWeight: FontWeight.w500,
+              fontSize: 13,
+            ),
+            tabs: const [
+              Tab(text: 'Products'),
+              Tab(text: 'Referrals'),
+            ],
+          ),
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
               children: [
-                Icon(Icons.cloud_off, size: 48, color: Colors.grey[600]),
-                const SizedBox(height: 16),
-                Text(
-                  'Could not load your earnings',
-                  style: GoogleFonts.poppins(
-                    fontSize: 16,
-                    color: Colors.white54,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
+                _buildProductsTab(purchases),
+                _buildReferralsTab(referralStats),
               ],
             ),
           ),
-        ),
+        ],
       ),
     );
   }
 
-  Widget _buildEmptyState(BuildContext context) {
+  Widget _buildCombinedSummary(
+    double totalInvestment,
+    double totalDailyProfit,
+    double referralBalance,
+    double totalReferralEarnings,
+  ) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            const Color(0xFF00C853).withValues(alpha: 0.15),
+            const Color(0xFF00C853).withValues(alpha: 0.05),
+          ],
+        ),
+        border: Border.all(
+          color: const Color(0xFF00C853).withValues(alpha: 0.4),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF00C853).withValues(alpha: 0.15),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildStatItemSmall(
+                Icons.monetization_on_outlined,
+                'Total Investment',
+                '\$${totalInvestment.toStringAsFixed(2)}',
+              ),
+              _buildStatItemSmall(
+                Icons.trending_up_rounded,
+                'Daily Profit',
+                '\$${totalDailyProfit.toStringAsFixed(2)}',
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildStatItemSmall(
+                Icons.account_balance_wallet_rounded,
+                'Referral Balance',
+                '\$${referralBalance.toStringAsFixed(2)}',
+              ),
+              _buildStatItemSmall(
+                Icons.emoji_events_rounded,
+                'Total Referral',
+                '\$${totalReferralEarnings.toStringAsFixed(2)}',
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatItemSmall(IconData icon, String label, String value) {
+    return Column(
+      children: [
+        Icon(icon, size: 20, color: const Color(0xFF00C853)),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: GoogleFonts.poppins(
+            fontSize: 11,
+            fontWeight: FontWeight.w500,
+            color: Colors.grey[400],
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          style: GoogleFonts.poppins(
+            fontSize: 15,
+            fontWeight: FontWeight.w700,
+            color: const Color(0xFF00C853),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildProductsTab(List<Map<String, dynamic>> purchases) {
+    if (purchases.isEmpty) {
+      return _buildEmptyProducts();
+    }
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+      children: [
+        Text(
+          'Your Packages',
+          style: GoogleFonts.poppins(
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+            color: Colors.white,
+          ),
+        ),
+        const SizedBox(height: 12),
+        ...purchases.map((p) => _buildPurchaseCard(p)),
+      ],
+    );
+  }
+
+  Widget _buildEmptyProducts() {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(40),
@@ -384,116 +545,223 @@ class LevelScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildPurchasesList(BuildContext context, List<Map<String, dynamic>> purchases) {
-    double totalDaily = 0;
-    double totalInvestment = 0;
-
-    for (final p in purchases) {
-      totalDaily += (p['dailyIncome'] as num?)?.toDouble() ?? 0;
-      totalInvestment += (p['equipmentPrice'] as num?)?.toDouble() ?? 0;
-    }
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildSummaryCard(totalInvestment, totalDaily),
-          const SizedBox(height: 24),
-          Text(
-            'Your Packages',
-            style: GoogleFonts.poppins(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 12),
-          ...purchases.map((p) => _buildPurchaseCard(p, context)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSummaryCard(double totalInvestment, double totalDaily) {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            const Color(0xFF00C853).withValues(alpha: 0.15),
-            const Color(0xFF00C853).withValues(alpha: 0.05),
-          ],
-        ),
-        border: Border.all(
-          color: const Color(0xFF00C853).withValues(alpha: 0.4),
-          width: 1.5,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF00C853).withValues(alpha: 0.15),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.all(20),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _buildStatItem(
-            icon: Icons.monetization_on_outlined,
-            label: 'Total Investment',
-            value: '\$${totalInvestment.toStringAsFixed(2)}',
-          ),
-          Container(
-            width: 1,
-            height: 60,
-            color: const Color(0xFF00C853).withValues(alpha: 0.3),
-          ),
-          _buildStatItem(
-            icon: Icons.trending_up_rounded,
-            label: 'Daily Profit',
-            value: '\$${totalDaily.toStringAsFixed(2)}',
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatItem({
-    required IconData icon,
-    required String label,
-    required String value,
-  }) {
-    return Column(
+  Widget _buildReferralsTab(ReferralStats? stats) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
       children: [
-        Icon(icon, size: 24, color: const Color(0xFF00C853)),
-        const SizedBox(height: 8),
+        if (stats != null) _buildReferralStatsCard(stats),
+        const SizedBox(height: 20),
         Text(
-          label,
-          style: GoogleFonts.poppins(
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-            color: Colors.grey[400],
-          ),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          value,
+          'Recent Commissions',
           style: GoogleFonts.poppins(
             fontSize: 16,
             fontWeight: FontWeight.w700,
+            color: Colors.white,
+          ),
+        ),
+        const SizedBox(height: 12),
+        _buildRecentCommissions(),
+      ],
+    );
+  }
+
+  Widget _buildReferralStatsCard(ReferralStats stats) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 4),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        color: const Color(0xFF1E1E1E),
+        border: Border.all(
+          color: const Color(0xFF00C853).withValues(alpha: 0.15),
+          width: 1.5,
+        ),
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildSmallStat('Team', '${stats.totalTeamMembers}'),
+              _buildSmallStat('Active', '${stats.activeMembers}'),
+              _buildSmallStat('Deposits', '\$${stats.totalTeamDeposit.toStringAsFixed(2)}'),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildSmallStat('Today Earned', '\$${stats.todayEarnings.toStringAsFixed(2)}'),
+              _buildSmallStat('Total Earned', '\$${stats.totalReferralEarnings.toStringAsFixed(2)}'),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSmallStat(String label, String value) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: GoogleFonts.poppins(
+            fontSize: 15,
+            fontWeight: FontWeight.w700,
             color: const Color(0xFF00C853),
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          label,
+          style: GoogleFonts.poppins(
+            fontSize: 11,
+            color: Colors.grey[500],
           ),
         ),
       ],
     );
   }
 
-  Widget _buildPurchaseCard(Map<String, dynamic> purchase, BuildContext context) {
+  Widget _buildRecentCommissions() {
+    final earningsAsync = ref.watch(referralEarningsProvider);
+
+    return earningsAsync.when(
+      data: (earnings) {
+        final recent = earnings.take(5).toList();
+        if (recent.isEmpty) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Text(
+                'No commissions yet.\nInvite friends to earn!',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.poppins(
+                  fontSize: 13,
+                  color: Colors.grey[500],
+                  height: 1.5,
+                ),
+              ),
+            ),
+          );
+        }
+        return Column(
+          children: [
+            ...recent.map((item) => _buildCommissionTile(item)),
+            if (earnings.length > 5)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: TextButton(
+                  onPressed: () => context.push('/referrals/earnings'),
+                  child: Text(
+                    'View All (${earnings.length})',
+                    style: GoogleFonts.poppins(
+                      color: const Color(0xFF00C853),
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
+      loading: () => const Center(
+        child: Padding(
+          padding: EdgeInsets.all(20),
+          child: CircularProgressIndicator(),
+        ),
+      ),
+      error: (e, _) => Center(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Text(
+            'Could not load commissions',
+            style: GoogleFonts.poppins(fontSize: 13, color: Colors.grey[500]),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCommissionTile(ReferralCommission item) {
+    final date = DateTime.fromMillisecondsSinceEpoch(item.createdAt);
+    final dateStr = '${date.month}/${date.day}/${date.year}';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1E1E1E),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: const Color(0xFF00C853).withValues(alpha: 0.1),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: const Color(0xFF00C853).withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(
+              Icons.person_outline,
+              color: Color(0xFF00C853),
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item.fromUsername,
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+                Text(
+                  'Level ${item.level} \u2022 ${item.percent}% of \$${item.depositAmount.toStringAsFixed(2)}',
+                  style: GoogleFonts.poppins(
+                    fontSize: 11,
+                    color: Colors.grey[500],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                '+\$${item.commissionAmount.toStringAsFixed(2)}',
+                style: GoogleFonts.poppins(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF00C853),
+                ),
+              ),
+              Text(
+                dateStr,
+                style: GoogleFonts.poppins(
+                  fontSize: 10,
+                  color: Colors.grey[600],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPurchaseCard(Map<String, dynamic> purchase) {
     final name = purchase['bikeName'] as String? ?? 'Package';
     final price = (purchase['equipmentPrice'] as num?)?.toDouble() ?? 0;
     final daily = (purchase['dailyIncome'] as num?)?.toDouble() ?? 0;
@@ -502,9 +770,8 @@ class LevelScreen extends ConsumerWidget {
     final date = purchasedAt > 0
         ? DateTime.fromMillisecondsSinceEpoch(purchasedAt.toInt())
         : null;
-    final dateStr = date != null
-        ? '${date.month}/${date.day}/${date.year}'
-        : '';
+    final dateStr =
+        date != null ? '${date.month}/${date.day}/${date.year}' : '';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -568,7 +835,7 @@ class LevelScreen extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                  '+\$${daily.toStringAsFixed(2)}',
+                '+\$${daily.toStringAsFixed(2)}',
                 style: GoogleFonts.poppins(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
@@ -1825,7 +2092,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!_initialized) {
         try {
-          final queryCode = GoRouterState.of(context).uri.queryParameters['invitationCode'] ?? '';
+          final queryCode = GoRouterState.of(context).uri.queryParameters['invitationCode'] ?? GoRouterState.of(context).uri.queryParameters['ref'] ?? '';
           if (queryCode.isNotEmpty) {
             _inviteCtrl.text = queryCode;
             setState(() => _isLogin = false);
@@ -3828,7 +4095,7 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
 
   Widget _buildTokenDropdown() {
     return DropdownButtonFormField<String>(
-      initialValue: selectedToken,
+      value: selectedToken,
       decoration: InputDecoration(
         labelText: 'Select Token',
         filled: true,

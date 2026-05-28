@@ -45,7 +45,7 @@ class ApiService {
       'email': email,
       'password': password,
       'transactionPassword': transactionPassword,
-      'invitationCode': invitationCode,
+      if (invitationCode != null) 'invitationCode': invitationCode,
     };
 
     return await _dio.post('/mutation/users:register', data: data);

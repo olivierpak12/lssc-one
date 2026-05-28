@@ -101,6 +101,11 @@ async function distributeCommissionsInternal(ctx: any, depositId: Id<"deposits">
   const deposit = await ctx.db.get(depositId);
   if (!deposit) return;
 
+  const existing = await ctx.db.query("referralCommissions")
+    .withIndex("by_depositId", (q: any) => q.eq("depositId", depositId))
+    .first();
+  if (existing) return;
+
   const user = await ctx.db.get(deposit.userId);
   if (!user || !user.referredBy) return;
 

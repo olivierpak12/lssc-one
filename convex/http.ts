@@ -40,6 +40,7 @@ http.route({ path: "/run/withdrawals:getWithdrawals", method: "OPTIONS", handler
 http.route({ path: "/mutation/withdrawals:requestWithdrawal", method: "OPTIONS", handler: httpAction(async () => corsResponse()) });
 http.route({ path: "/action/etherscanActions:syncUserDeposits", method: "OPTIONS", handler: httpAction(async () => corsResponse()) });
 http.route({ path: "/run/admin:getStats", method: "OPTIONS", handler: httpAction(async () => corsResponse()) });
+http.route({ path: "/run/networks:getActiveNetworks", method: "OPTIONS", handler: httpAction(async () => corsResponse()) });
 http.route({ path: "/run/teams:getTeamStats", method: "OPTIONS", handler: httpAction(async () => corsResponse()) });
 http.route({ path: "/run/bikes:getUserPurchases", method: "OPTIONS", handler: httpAction(async () => corsResponse()) });
 http.route({ path: "/mutation/bikes:buyBike", method: "OPTIONS", handler: httpAction(async () => corsResponse()) });
@@ -67,8 +68,11 @@ http.route({
   method: "POST",
   handler: httpAction(async (ctx, request) => {
     const body = await request.json();
+    const cleanBody = Object.fromEntries(
+      Object.entries(body).filter(([_, v]) => v !== null)
+    ) as any;
     try {
-      const result = await ctx.runMutation(api.users.register, body);
+      const result = await ctx.runMutation(api.users.register, cleanBody);
       return jsonResponse({ _id: result });
     } catch (e: any) {
       return jsonResponse(e.message, 400);
@@ -501,6 +505,19 @@ http.route({
   handler: httpAction(async (ctx) => {
     try {
       const result = await ctx.runQuery(api.referrals.getLeaderboard);
+      return jsonResponse(result);
+    } catch (e: any) {
+      return jsonResponse(e.message, 400);
+    }
+  }),
+});
+
+http.route({
+  path: "/run/networks:getActiveNetworks",
+  method: "GET",
+  handler: httpAction(async (ctx) => {
+    try {
+      const result = await ctx.runQuery(api.networks.getActiveNetworks);
       return jsonResponse(result);
     } catch (e: any) {
       return jsonResponse(e.message, 400);
