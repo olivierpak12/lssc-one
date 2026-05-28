@@ -206,7 +206,7 @@ class MainShell extends StatelessWidget {
             indicatorColor: colorScheme.primary.withValues(alpha: 0.2),
             leading: Padding(
               padding: const EdgeInsets.symmetric(vertical: 12),
-              child: Icon(Icons.shield_rounded, size: 32, color: colorScheme.primary),
+              child: Image.asset('asset/logo.png', width: 32, height: 32),
             ),
             destinations: _navItems.map((item) => NavigationRailDestination(
               icon: Icon(item.$2),
@@ -2232,7 +2232,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Icon(Icons.shield_rounded, size: 70, color: Color(0xFF00C853)),
+                  Image.asset('asset/logo.png', width: 70, height: 70),
                   const SizedBox(height: 15),
                   Text(
                     'CryptoVault Pro',
