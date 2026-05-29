@@ -43,3 +43,6 @@ app.*.map.json
 .env.local
 .env
 /node_modules
+
+# Preserve build/web for Vercel deployment
+!/build/web
