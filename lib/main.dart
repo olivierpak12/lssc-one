@@ -965,7 +965,6 @@ class _EarningsScreenState extends ConsumerState<EarningsScreen>
       ),
     );
   }
-
   Widget _buildPurchaseCard(Map<String, dynamic> purchase) {
     final purchaseId = purchase['_id'] as String? ?? '';
     final name = purchase['bikeName'] as String? ?? 'Package';
