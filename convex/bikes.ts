@@ -104,6 +104,8 @@ export const buyBike = mutation({
       throw new Error("Insufficient balance");
     }
 
+    let lastClaimedAt: number | undefined;
+
     if (refundAmount > 0n) {
       if (balances.length > 0) {
         const balance = balances[0];
@@ -123,6 +125,7 @@ export const buyBike = mutation({
       const refundBikeId = BIKE_ORDER[highestOwnedIndex];
       const refundPurchase = purchases.find((p) => p.bikeId === refundBikeId);
       if (refundPurchase) {
+        lastClaimedAt = refundPurchase.lastClaimedAt;
         await ctx.db.delete(refundPurchase._id);
       }
     }
@@ -146,14 +149,18 @@ export const buyBike = mutation({
 
     const bike = BIKE_CATALOG[args.bikeId];
     if (bike) {
-      await ctx.db.insert("purchases", {
+      const newPurchase: any = {
         userId: args.userId,
         bikeId: args.bikeId,
         bikeName: bike.name,
         equipmentPrice: bike.price,
         dailyIncome: bike.dailyIncome,
         purchasedAt: Date.now(),
-      });
+      };
+      if (lastClaimedAt !== undefined) {
+        newPurchase.lastClaimedAt = lastClaimedAt;
+      }
+      await ctx.db.insert("purchases", newPurchase);
     }
 
     return { success: true };

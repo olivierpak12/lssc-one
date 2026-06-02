@@ -1440,33 +1440,47 @@ class _BikeScreenState extends ConsumerState<BikeScreen> {
                     'Need \$${neededUsd} more to afford ${starterBike.name} and earn \$${starterBike.dailyIncome.toStringAsFixed(2)}/day.';
               }
 
-              return SingleChildScrollView(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildInvestmentStatsCard(nextPackageMessage),
-                    const SizedBox(height: 24),
-                    LayoutBuilder(
-                      builder: (context, constraints) {
-                        final crossAxisCount = constraints.maxWidth > 900
-                            ? 3
-                            : (constraints.maxWidth > 600 ? 2 : 1);
-                        final childAspectRatio = crossAxisCount == 3
-                            ? 1.18
-                            : (crossAxisCount == 2 ? 1.28 : 1.4);
+              return RefreshIndicator(
+                onRefresh: () async {
+                  ref.invalidate(purchasesProvider);
+                  final userId = ref.read(authProvider).userId;
+                  if (userId != null) {
+                    ref.invalidate(balanceProvider(userId));
+                  }
+                  await Future.wait([
+                    ref.refresh(purchasesProvider.future),
+                    if (userId != null)
+                      ref.refresh(balanceProvider(userId).future),
+                  ]);
+                },
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(20),
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildInvestmentStatsCard(nextPackageMessage, userBalance),
+                      const SizedBox(height: 24),
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          final crossAxisCount = constraints.maxWidth > 900
+                              ? 3
+                              : (constraints.maxWidth > 600 ? 2 : 1);
+                          final childAspectRatio = crossAxisCount == 3
+                              ? 1.18
+                              : (crossAxisCount == 2 ? 1.28 : 1.4);
 
-                        return GridView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: crossAxisCount,
-                            mainAxisSpacing: 14,
-                            crossAxisSpacing: 14,
-                            childAspectRatio: childAspectRatio,
-                          ),
-                          itemCount: bikes.length,
-                          itemBuilder: (context, index) {
+                          return GridView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: crossAxisCount,
+                              mainAxisSpacing: 14,
+                              crossAxisSpacing: 14,
+                              childAspectRatio: childAspectRatio,
+                            ),
+                            itemCount: bikes.length,
+                            itemBuilder: (context, index) {
                             final bike = bikes[index];
                             final isOwned = ownedBikeIds.contains(bike.id);
                             final isSkipped = highestOwnedIndex > index && !isOwned;
@@ -1516,8 +1530,9 @@ class _BikeScreenState extends ConsumerState<BikeScreen> {
                     ),
                   ],
                 ),
-              );
-            },
+              ),
+            );
+          },
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (e, _) => Center(
               child: Padding(
@@ -1566,16 +1581,18 @@ class _BikeScreenState extends ConsumerState<BikeScreen> {
     );
   }
 
-  Widget _buildInvestmentStatsCard(String nextPackageMessage) {
+  Widget _buildInvestmentStatsCard(String nextPackageMessage, BigInt userBalanceMicros) {
     double totalInvestment = 0.0;
     double interestCollectable = 0.0;
-    
+
     for (var bike in bikes) {
       if (bike.isOwned) {
         totalInvestment += bike.equipmentPrice;
         interestCollectable += bike.dailyIncome * 30;
       }
     }
+
+    final userBalance = userBalanceMicros.toDouble() / 1000000;
 
     return AppCard(
       borderRadius: 20,
@@ -1601,6 +1618,16 @@ class _BikeScreenState extends ConsumerState<BikeScreen> {
                 icon: '📈',
                 label: 'Monthly Earnings',
                 value: '\$${interestCollectable.toStringAsFixed(2)}',
+              ),
+              Container(
+                width: 1,
+                height: 60,
+                color: const Color(0xFF00C853).withValues(alpha: 0.3),
+              ),
+              _buildStatItem(
+                icon: '💳',
+                label: 'Your Balance',
+                value: '\$${userBalance.toStringAsFixed(2)}',
               ),
             ],
           ),
