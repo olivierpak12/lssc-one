@@ -152,17 +152,20 @@ class AuthNotifier extends StateNotifier<AuthState> {
       if (e.response?.data != null) {
         raw = e.response!.data.toString().replaceAll('"', '');
       } else {
-        raw = e.message ?? '';
+        raw = e.message?.replaceFirst(RegExp(r'^DioException\s*\[.*?\]\s*'), '') ?? '';
       }
+    } else if (e is ArgumentError) {
+      raw = 'Missing configuration: ${e.message}';
     } else {
       raw = e.toString();
     }
 
-    final message = raw
+    final display = raw
         .replaceFirst(RegExp(r'\[CONVEX.*?\]\s*'), '')
         .replaceFirst('Uncaught Error: ', '')
-        .trim()
-        .toLowerCase();
+        .trim();
+
+    final message = display.toLowerCase();
 
     if (message.contains('already exists') || message.contains('email already in use') || message.contains('duplicate')) {
       return 'This email is already registered. Try logging in instead.';
@@ -182,14 +185,17 @@ class AuthNotifier extends StateNotifier<AuthState> {
     if (message.contains('rate limit') || message.contains('too many requests')) {
       return 'Too many attempts. Please wait a moment before trying again.';
     }
-    if (message.contains('network') || message.contains('connection') || message.contains('timeout')) {
-      return 'Connection error. Please check your internet and try again.';
+    if (message.contains('unreachable') || message.contains('connection') || message.contains('timeout') || message.contains('dns')) {
+      return 'Cannot reach the server. Check your internet connection and ensure the backend URL is configured.';
     }
     if (message.contains('email') && (message.contains('verify') || message.contains('not verified'))) {
       return 'Please verify your email address before continuing.';
     }
 
-    return 'Something went wrong. Please try again later.';
+    if (display.isEmpty) {
+      return 'An unknown error occurred. Please try again.';
+    }
+    return 'Error: $display';
   }
 
   Future<bool> checkReferralCode(String code) async {

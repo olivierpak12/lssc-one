@@ -18,6 +18,7 @@ import 'providers/purchases_provider.dart';
 import 'providers/referral_provider.dart';
 import 'models/referral.dart';
 import 'services/api_service.dart';
+import 'core/config/app_config.dart';
 import 'theme/app_colors.dart';
 import 'theme/app_theme.dart' show AppTheme;
 import 'theme/app_animations.dart';
@@ -25,7 +26,7 @@ import 'components/app_button.dart';
 import 'components/app_card.dart';
 
 
-void main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(const ProviderScope(child: LSSCONEApp()));
 }
@@ -4546,7 +4547,7 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
   ];
 
   List<dynamic> get _visibleNetworks {
-    const useMainnet = String.fromEnvironment('USE_MAINNET', defaultValue: 'false') == 'true';
+    const useMainnet = AppConfig.useMainnet;
     final filtered = useMainnet
         ? networks.where((n) => const [1, 137].contains(n['chainId'] as int?)).toList()
         : networks.where((n) => const [11155111, 80002].contains(n['chainId'] as int?)).toList();
@@ -4771,7 +4772,7 @@ class _WithdrawScreenState extends ConsumerState<WithdrawScreen> {
   ];
 
   List<dynamic> get _visibleNetworks {
-    const useMainnet = String.fromEnvironment('USE_MAINNET', defaultValue: 'false') == 'true';
+    const useMainnet = AppConfig.useMainnet;
     final filtered = useMainnet
         ? networks.where((n) => const [1, 137].contains(n['chainId'] as int?)).toList()
         : networks.where((n) => const [11155111, 80002].contains(n['chainId'] as int?)).toList();

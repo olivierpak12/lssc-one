@@ -1,29 +1,16 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../core/config/app_config.dart';
 
 class ApiService {
   final Dio _dio = Dio();
 
-  final String baseUrl;
-
-  ApiService() : baseUrl = _getConvexUrl() {
-    _dio.options.baseUrl = baseUrl;
-  }
-
-  static String _getConvexUrl() {
-    const siteUrl = String.fromEnvironment('CONVEX_SITE_URL');
-    if (siteUrl.isNotEmpty) {
-      return siteUrl;
+  ApiService() {
+    try {
+      _dio.options.baseUrl = AppConfig.resolvedConvexUrl;
+    } on ArgumentError {
+      _dio.options.baseUrl = '';
     }
-
-    const url = String.fromEnvironment('CONVEX_URL');
-    if (url.isEmpty) {
-      throw ArgumentError(
-        'CONVEX_SITE_URL or CONVEX_URL not found in environment. '
-        'Make sure to pass --dart-define=CONVEX_SITE_URL=... or --dart-define=CONVEX_URL=...',
-      );
-    }
-    return url;
   }
 
   // --- Auth Methods ---
