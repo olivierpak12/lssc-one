@@ -78,6 +78,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(path: '/settings', builder: (context, state) => const SettingsScreen()),
           GoRoute(path: '/admin', builder: (context, state) => const AdminDashboardScreen()),
           GoRoute(path: '/admin/users', builder: (context, state) => const UserManagementScreen()),
+          GoRoute(path: '/activity', builder: (context, state) => const ActivityHistoryScreen()),
         ],
       ),
     ],
@@ -123,29 +124,6 @@ class LSSCONEApp extends ConsumerWidget {
     );
   }
 }
-
-// --- Replaceable Carousel Data ---
-// To swap products, just edit this list. Each entry: title, subtitle, imageAsset/URL, tag.
-final List<Map<String, String>> carouselProducts = [
-  {
-    'title': 'Crypto Savings Vault',
-    'subtitle': 'Earn up to 8% APY on stablecoins',
-    'image': 'asset/1.png',
-    'tag': 'Featured',
-  },
-  {
-    'title': 'Instant Cross-Chain Bridge',
-    'subtitle': 'Move assets across 10+ networks in seconds',
-    'image': 'asset/2.png',
-    'tag': 'New',
-  },
-  {
-    'title': 'DeFi Yield Optimizer',
-    'subtitle': 'Auto-compound returns with one click',
-    'image': 'asset/3.png',
-    'tag': 'Popular',
-  },
-];
 
 // --- Responsive Main Shell ---
 class MainShell extends StatelessWidget {
@@ -3831,11 +3809,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
           child: Column(
             children: [
-              const AnimatedEntry(
-                delay: 0,
-                child: _ImageCarousel(),
-              ),
-              AppSpacing.hXxl,
               AnimatedEntry(
                 delay: 80,
                 child: balanceAsync.when(
@@ -3864,11 +3837,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     Expanded(child: _ActionTile(icon: Icons.arrow_circle_up_outlined, label: 'Withdraw', color: AppColors.warning, onTap: () => context.push('/withdraw'))),
                   ],
                 ),
-              ),
-              AppSpacing.hXxxl,
-              AnimatedEntry(
-                delay: 360,
-                child: const _VideoExplainer(),
               ),
               AppSpacing.hXxxl,
               AnimatedEntry(
@@ -4185,179 +4153,6 @@ class _ActionTile extends StatelessWidget {
   }
 }
 
-// --- Image Carousel ---
-class _ImageCarousel extends StatefulWidget {
-  const _ImageCarousel();
-
-  @override
-  State<_ImageCarousel> createState() => _ImageCarouselState();
-}
-
-class _ImageCarouselState extends State<_ImageCarousel> {
-  final _pageCtrl = PageController(viewportFraction: 0.92);
-  int _current = 0;
-  Timer? _timer;
-
-  @override
-  void initState() {
-    super.initState();
-    _timer = Timer.periodic(const Duration(seconds: 4), (_) {
-      if (_pageCtrl.hasClients) {
-        final next = (_current + 1) % carouselProducts.length;
-        _pageCtrl.animateToPage(next, duration: AppDurations.carousel, curve: AppEasing.easeInOut);
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    _pageCtrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        SizedBox(
-          height: 180,
-          child: PageView.builder(
-            controller: _pageCtrl,
-            onPageChanged: (i) => setState(() => _current = i),
-            itemCount: carouselProducts.length,
-            itemBuilder: (context, i) {
-              final p = carouselProducts[i];
-              return Container(
-                margin: const EdgeInsets.symmetric(horizontal: 6),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(20),
-                  image: DecorationImage(
-                    image: AssetImage(p['image']!),
-                    fit: BoxFit.cover,
-                  ),
-                ),
-                child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(20),
-                    gradient: AppGradients.darkOverlay,
-                  ),
-                  padding: const EdgeInsets.all(16),
-                  alignment: Alignment.bottomLeft,
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: AppColors.primary,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(p['tag'] ?? '', style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.black)),
-                      ),
-                      AppSpacing.hXs,
-                      Text(p['title']!, style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 16, color: Colors.white)),
-                      AppSpacing.hXs,
-                      Text(p['subtitle']!, style: GoogleFonts.poppins(fontSize: 12, color: Colors.white70)),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-        AppSpacing.hMd,
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: List.generate(carouselProducts.length, (i) {
-            return AnimatedContainer(
-              duration: AppDurations.fast,
-              curve: AppEasing.easeOut,
-              margin: const EdgeInsets.symmetric(horizontal: 3),
-              width: _current == i ? 22 : 8,
-              height: 8,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(4),
-                color: _current == i ? AppColors.primary : AppColors.textMuted.withValues(alpha: 0.3),
-              ),
-            );
-          }),
-        ),
-      ],
-    );
-  }
-}
-
-// --- Video Explainer Section ---
-class _VideoExplainer extends StatelessWidget {
-  const _VideoExplainer();
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Icon(Icons.play_circle_fill, color: AppColors.primary, size: 22),
-            AppSpacing.wSm,
-            Text('How It Works', style: GoogleFonts.poppins(fontSize: 17, fontWeight: FontWeight.w700)),
-          ],
-        ),
-        AppSpacing.hMd,
-        GestureDetector(
-          onTap: () async {
-            final url = Uri.parse('https://www.youtube.com/watch?v=dQw4w9WgXcQ');
-            if (await canLaunchUrl(url)) {
-              await launchUrl(url, mode: LaunchMode.externalApplication);
-            }
-          },
-          child: Container(
-            height: 200,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(18),
-              gradient: LinearGradient(
-                colors: [AppColors.primaryDark, AppColors.surface],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              border: Border.all(color: AppColors.borderSubtle),
-            ),
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.play_circle_fill, size: 64, color: AppColors.primary),
-                    AppSpacing.hMd,
-                    Text('Watch: How LSSC ONEtects Your Assets',
-                      style: GoogleFonts.poppins(fontSize: 14, color: AppColors.textPrimary.withValues(alpha: 0.8)),
-                      textAlign: TextAlign.center,
-                    ),
-                    AppSpacing.hXs,
-                    Text('Tap to watch on YouTube', style: GoogleFonts.poppins(fontSize: 11, color: AppColors.textMuted)),
-                  ],
-                ),
-                Positioned(
-                  top: 12,
-                  right: 12,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(color: AppColors.error, borderRadius: BorderRadius.circular(8)),
-                    child: const Text('LIVE', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold)),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 // --- Our Product Section ---
 class _OurProductSection extends StatelessWidget {
   const _OurProductSection();
@@ -4436,6 +4231,118 @@ class _OurProductSection extends StatelessWidget {
   }
 }
 
+// --- Activity History Full Page ---
+class ActivityHistoryScreen extends ConsumerWidget {
+  const ActivityHistoryScreen({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final auth = ref.watch(authProvider);
+    final userId = auth.userId ?? "";
+    final activityAsync = ref.watch(activityProvider(userId));
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Activity History')),
+      body: RefreshIndicator(
+        onRefresh: () async {
+          ref.invalidate(activityProvider(userId));
+          await ref.refresh(activityProvider(userId).future);
+        },
+        child: activityAsync.when(
+          data: (items) {
+            if (items.isEmpty) {
+              return ListView(
+                children: const [
+                  SizedBox(height: 120),
+                  Center(child: Text('No activity yet', style: TextStyle(color: Colors.white38))),
+                ],
+              );
+            }
+            return ListView(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+              children: [
+                ...items.asMap().entries.map((entry) {
+                  return AnimatedScaleIn(
+                    delay: entry.key * 30,
+                    child: _buildItem(entry.value),
+                  );
+                }),
+              ],
+            );
+          },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, s) => Center(
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.error_outline, size: 48, color: Colors.grey),
+                  const SizedBox(height: 16),
+                  const Text('Failed to load activity', style: TextStyle(color: Colors.white54)),
+                  const SizedBox(height: 12),
+                  TextButton(
+                    onPressed: () => ref.invalidate(activityProvider(userId)),
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildItem(dynamic item) {
+    final bool isDeposit = item['type'] == 'deposit';
+    double amount = 0;
+    try {
+      amount = double.parse(item['amount'].toString()) / 1000000;
+    } catch (_) {}
+    String token = item['token'] ?? 'USDT';
+    String status = item['status'] ?? 'pending';
+    if (status == 'swept') status = 'confirmed';
+    String hash = item['txHash']?.toString() ?? "";
+    String displayHash = hash.isNotEmpty && hash.length > 10 ? "${hash.substring(0, 10)}..." : (hash.isNotEmpty ? hash : "Pending...");
+
+    return AppCard(
+      margin: const EdgeInsets.only(bottom: 12),
+      borderRadius: 15,
+      padding: EdgeInsets.zero,
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: (isDeposit ? AppColors.overlayGreen : AppColors.overlayOrange),
+          child: Icon(
+            isDeposit ? Icons.call_received : Icons.call_made,
+            color: isDeposit ? AppColors.success : AppColors.warning,
+            size: 18,
+          ),
+        ),
+        title: Text(
+          isDeposit ? '$token Received' : '$token Withdrawal',
+          style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 14),
+        ),
+        subtitle: Text(displayHash, style: GoogleFonts.poppins(fontSize: 12, color: AppColors.textTertiary)),
+        trailing: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Text(
+              '${isDeposit ? '+' : '-'}${amount.toStringAsFixed(2)}',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w700, color: isDeposit ? AppColors.success : AppColors.warning),
+            ),
+            Text(
+              status.toUpperCase(),
+              style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w700, color: status == 'confirmed' || status == 'completed' ? AppColors.success : AppColors.warning),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _RecentActivityHeader extends StatelessWidget {
   const _RecentActivityHeader();
   @override
@@ -4446,7 +4353,7 @@ class _RecentActivityHeader extends StatelessWidget {
         Flexible(
           child: Text('Recent Activity', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
         ),
-        TextButton(onPressed: () {}, child: const Text('See All', style: TextStyle(color: Colors.greenAccent))),
+        TextButton(onPressed: () => context.push('/activity'), child: const Text('See All', style: TextStyle(color: Colors.greenAccent))),
       ],
     );
   }

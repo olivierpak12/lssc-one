@@ -180,7 +180,7 @@ class _ReferralCodeCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authProvider);
     final String code = authState.referralCode ?? "---"; 
-    final String link = authState.referralLink ?? "https://cryptovault.com/register?ref=$code";
+    final String link = authState.referralLink ?? "https://lssc.com/register?ref=$code";
 
     return AppCard(
       padding: const EdgeInsets.all(20),
