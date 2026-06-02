@@ -1600,11 +1600,25 @@ class _BikeScreenState extends ConsumerState<BikeScreen> {
               ),
               _buildStatItem(
                 icon: '📈',
-                label: 'Interest Collectable',
+                label: 'Monthly Earnings',
                 value: '\$${interestCollectable.toStringAsFixed(2)}',
               ),
             ],
           ),
+          if (interestCollectable > 0)
+            Padding(
+              padding: const EdgeInsets.only(top: 12, bottom: 8),
+              child: Text(
+                'Your packages earn daily. This is your total projected income for 30 days from all your active packages.',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.poppins(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w400,
+                  color: AppColors.textTertiary,
+                  height: 1.4,
+                ),
+              ),
+            ),
           const SizedBox(height: 16),
           Row(
             children: [
