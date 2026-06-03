@@ -214,6 +214,10 @@ class ApiService {
     return await _dio.post('/mutation/messages:markAllRead', data: {'userId': userId});
   }
 
+  Future<Response> deleteMessage(String messageId, String userId) async {
+    return await _dio.post('/mutation/messages:remove', data: {'messageId': messageId, 'userId': userId});
+  }
+
   // --- Team Methods ---
 
   Future<Response> getTeamStats(String userId, String period) async {

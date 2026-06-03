@@ -724,7 +724,7 @@ class _EarningsScreenState extends ConsumerState<EarningsScreen>
               SizedBox(
                 width: double.infinity,
                 child: AppPrimaryButton(
-                  label: 'Go to Shop',
+                  label: 'Go to Global',
                   icon: Icons.directions_bike_rounded,
                   onPressed: () => context.push('/lssc'),
                 ),
@@ -4435,6 +4435,7 @@ class MessagesScreen extends ConsumerWidget {
                     delay: entry.key * 30,
                     child: _MessageItem(
                       message: entry.value,
+                      userId: userId,
                       onTap: () async {
                         if (entry.value['read'] == false) {
                           final msgId = entry.value['_id'];
@@ -4442,6 +4443,12 @@ class MessagesScreen extends ConsumerWidget {
                           ref.invalidate(messagesProvider(userId));
                           ref.invalidate(unreadCountProvider(userId));
                         }
+                      },
+                      onDelete: () async {
+                        final msgId = entry.value['_id'].toString();
+                        await ref.read(apiServiceProvider).deleteMessage(msgId, userId);
+                        ref.invalidate(messagesProvider(userId));
+                        ref.invalidate(unreadCountProvider(userId));
                       },
                     ),
                   );
@@ -4476,8 +4483,15 @@ class MessagesScreen extends ConsumerWidget {
 
 class _MessageItem extends StatelessWidget {
   final dynamic message;
+  final String userId;
   final VoidCallback onTap;
-  const _MessageItem({required this.message, required this.onTap});
+  final VoidCallback onDelete;
+  const _MessageItem({
+    required this.message,
+    required this.userId,
+    required this.onTap,
+    required this.onDelete,
+  });
 
   IconData _iconForType(String type) {
     switch (type) {
@@ -4532,62 +4546,126 @@ class _MessageItem extends StatelessWidget {
     final String body = message['body'] ?? '';
     final int createdAt = message['createdAt'] ?? 0;
     final timeStr = _formatTime(createdAt);
+    final msgId = message['_id'];
 
-    return GestureDetector(
-      onTap: onTap,
-      child: AppCard(
+    return Dismissible(
+      key: ValueKey(msgId),
+      direction: DismissDirection.horizontal,
+      background: Container(
         margin: const EdgeInsets.only(bottom: 10),
-        borderRadius: 15,
-        padding: EdgeInsets.zero,
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(15),
-            border: !isRead
-                ? Border.all(color: AppColors.primary.withValues(alpha: 0.3))
-                : null,
+        decoration: BoxDecoration(
+          color: Colors.red,
+          borderRadius: BorderRadius.circular(15),
+        ),
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 24),
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.delete, color: Colors.white, size: 22),
+            SizedBox(width: 8),
+            Text('Delete', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+          ],
+        ),
+      ),
+      secondaryBackground: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        decoration: BoxDecoration(
+          color: Colors.red,
+          borderRadius: BorderRadius.circular(15),
+        ),
+        alignment: Alignment.centerLeft,
+        padding: const EdgeInsets.only(left: 24),
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.delete, color: Colors.white, size: 22),
+            SizedBox(width: 8),
+            Text('Delete', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+          ],
+        ),
+      ),
+      confirmDismiss: (direction) async {
+        final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            backgroundColor: AppColors.surfaceCard,
+            title: const Text('Delete notification', style: TextStyle(color: Colors.white)),
+            content: const Text('Are you sure?', style: TextStyle(color: Colors.white70)),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(false),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(true),
+                child: const Text('Delete', style: TextStyle(color: Colors.red)),
+              ),
+            ],
           ),
-          child: ListTile(
-            leading: CircleAvatar(
-              backgroundColor: _bgForType(type),
-              child: Icon(_iconForType(type), color: _colorForType(type), size: 18),
+        );
+        if (confirmed == true) {
+          onDelete();
+          return true;
+        }
+        return false;
+      },
+      child: GestureDetector(
+        onTap: onTap,
+        child: AppCard(
+          margin: const EdgeInsets.only(bottom: 10),
+          borderRadius: 15,
+          padding: EdgeInsets.zero,
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(15),
+              border: !isRead
+                  ? Border.all(color: AppColors.primary.withValues(alpha: 0.3))
+                  : null,
             ),
-            title: Row(
-              children: [
-                if (!isRead)
-                  Container(
-                    width: 8,
-                    height: 8,
-                    margin: const EdgeInsets.only(right: 6),
-                    decoration: const BoxDecoration(
-                      color: AppColors.primary,
-                      shape: BoxShape.circle,
+            child: ListTile(
+              leading: CircleAvatar(
+                backgroundColor: _bgForType(type),
+                child: Icon(_iconForType(type), color: _colorForType(type), size: 18),
+              ),
+              title: Row(
+                children: [
+                  if (!isRead)
+                    Container(
+                      width: 8,
+                      height: 8,
+                      margin: const EdgeInsets.only(right: 6),
+                      decoration: const BoxDecoration(
+                        color: AppColors.primary,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: GoogleFonts.poppins(
+                        fontWeight: isRead ? FontWeight.w500 : FontWeight.w700,
+                        fontSize: 14,
+                      ),
                     ),
                   ),
-                Expanded(
-                  child: Text(
-                    title,
-                    style: GoogleFonts.poppins(
-                      fontWeight: isRead ? FontWeight.w500 : FontWeight.w700,
-                      fontSize: 14,
-                    ),
+                ],
+              ),
+              subtitle: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 2),
+                  Text(
+                    body,
+                    style: GoogleFonts.poppins(fontSize: 12, color: AppColors.textTertiary),
                   ),
-                ),
-              ],
-            ),
-            subtitle: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 2),
-                Text(
-                  body,
-                  style: GoogleFonts.poppins(fontSize: 12, color: AppColors.textTertiary),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  timeStr,
-                  style: GoogleFonts.poppins(fontSize: 10, color: AppColors.textMuted),
-                ),
-              ],
+                  const SizedBox(height: 4),
+                  Text(
+                    timeStr,
+                    style: GoogleFonts.poppins(fontSize: 10, color: AppColors.textMuted),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

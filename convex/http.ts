@@ -571,4 +571,86 @@ http.route({
   }),
 });
 
+// --- Message Routes ---
+
+http.route({ path: "/run/messages:list", method: "OPTIONS", handler: httpAction(async () => corsResponse()) });
+http.route({ path: "/run/messages:unreadCount", method: "OPTIONS", handler: httpAction(async () => corsResponse()) });
+http.route({ path: "/mutation/messages:markRead", method: "OPTIONS", handler: httpAction(async () => corsResponse()) });
+http.route({ path: "/mutation/messages:markAllRead", method: "OPTIONS", handler: httpAction(async () => corsResponse()) });
+http.route({ path: "/mutation/messages:remove", method: "OPTIONS", handler: httpAction(async () => corsResponse()) });
+
+http.route({
+  path: "/run/messages:list",
+  method: "GET",
+  handler: httpAction(async (ctx, request) => {
+    try {
+      const { searchParams } = new URL(request.url);
+      const userId = searchParams.get("userId");
+      if (!userId) return jsonResponse("Missing userId", 400);
+      const result = await ctx.runQuery(api.messages.list, { userId: userId as any });
+      return jsonResponse(result);
+    } catch (e: any) {
+      return jsonResponse(e.message, 400);
+    }
+  }),
+});
+
+http.route({
+  path: "/run/messages:unreadCount",
+  method: "GET",
+  handler: httpAction(async (ctx, request) => {
+    try {
+      const { searchParams } = new URL(request.url);
+      const userId = searchParams.get("userId");
+      if (!userId) return jsonResponse("Missing userId", 400);
+      const result = await ctx.runQuery(api.messages.unreadCount, { userId: userId as any });
+      return jsonResponse(result);
+    } catch (e: any) {
+      return jsonResponse(e.message, 400);
+    }
+  }),
+});
+
+http.route({
+  path: "/mutation/messages:markRead",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const body = await request.json();
+    try {
+      await ctx.runMutation(api.messages.markRead, body);
+      return jsonResponse({ success: true });
+    } catch (e: any) {
+      return jsonResponse(e.message, 400);
+    }
+  }),
+});
+
+http.route({
+  path: "/mutation/messages:markAllRead",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const body = await request.json();
+    try {
+      await ctx.runMutation(api.messages.markAllRead, body);
+      return jsonResponse({ success: true });
+    } catch (e: any) {
+      return jsonResponse(e.message, 400);
+    }
+  }),
+});
+
+http.route({
+  path: "/mutation/messages:remove",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const body = await request.json();
+    try {
+      await ctx.runMutation(api.messages.remove, body);
+      return jsonResponse({ success: true });
+    } catch (e: any) {
+      return jsonResponse(e.message, 400);
+    }
+  }),
+});
+
 export default http;

@@ -60,3 +60,16 @@ export const markAllRead = mutation({
     }
   },
 });
+
+export const remove = mutation({
+  args: {
+    messageId: v.id("messages"),
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const message = await ctx.db.get(args.messageId);
+    if (!message) throw new Error("Message not found");
+    if (message.userId !== args.userId) throw new Error("Not authorized to delete this message");
+    await ctx.db.delete(args.messageId);
+  },
+});
