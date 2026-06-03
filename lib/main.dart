@@ -24,6 +24,8 @@ import 'theme/app_theme.dart' show AppTheme;
 import 'theme/app_animations.dart';
 import 'components/app_button.dart';
 import 'components/app_card.dart';
+import 'components/support_chat_button.dart';
+import 'components/notification_bell.dart';
 
 
 void main() {
@@ -78,6 +80,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(path: '/admin', builder: (context, state) => const AdminDashboardScreen()),
           GoRoute(path: '/admin/users', builder: (context, state) => const UserManagementScreen()),
           GoRoute(path: '/activity', builder: (context, state) => const ActivityHistoryScreen()),
+          GoRoute(path: '/messages', builder: (context, state) => const MessagesScreen()),
         ],
       ),
     ],
@@ -155,34 +158,44 @@ class MainShell extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
 
     if (isDesktop) {
-      return Row(
+      return Stack(
         children: [
-          NavigationRail(
-            selectedIndex: currentIndex,
-            onDestinationSelected: (i) => context.go(_navItems[i].$1),
-            labelType: NavigationRailLabelType.all,
-            minExtendedWidth: 200,
-            groupAlignment: -0.3,
-            backgroundColor: const Color(0xFF0A0A0A),
-            indicatorColor: AppColors.primary.withValues(alpha: 0.2),
-            leading: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              child: Image.asset('asset/logo.png', width: 32, height: 32),
-            ),
-            destinations: _navItems.map((item) => NavigationRailDestination(
-              icon: Icon(item.$2),
-              selectedIcon: Icon(item.$2, color: colorScheme.primary),
-              label: Text(item.$3, style: const TextStyle(fontWeight: FontWeight.w600)),
-            )).toList(),
+          Row(
+            children: [
+              NavigationRail(
+                selectedIndex: currentIndex,
+                onDestinationSelected: (i) => context.go(_navItems[i].$1),
+                labelType: NavigationRailLabelType.all,
+                minExtendedWidth: 200,
+                groupAlignment: -0.3,
+                backgroundColor: const Color(0xFF0A0A0A),
+                indicatorColor: AppColors.primary.withValues(alpha: 0.2),
+                leading: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  child: Image.asset('asset/logo.png', width: 32, height: 32),
+                ),
+                destinations: _navItems.map((item) => NavigationRailDestination(
+                  icon: Icon(item.$2),
+                  selectedIcon: Icon(item.$2, color: colorScheme.primary),
+                  label: Text(item.$3, style: const TextStyle(fontWeight: FontWeight.w600)),
+                )).toList(),
+              ),
+              const VerticalDivider(width: 1, color: Colors.white12),
+              Expanded(child: child),
+            ],
           ),
-          const VerticalDivider(width: 1, color: Colors.white12),
-          Expanded(child: child),
+          const Positioned(
+            right: 24,
+            bottom: 24,
+            child: SupportChatButton(),
+          ),
         ],
       );
     }
 
     return Scaffold(
       body: child,
+      floatingActionButton: const SupportChatButton(),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           border: Border(top: BorderSide(color: AppColors.borderSubtle, width: 0.5)),
@@ -312,6 +325,7 @@ class _EarningsScreenState extends ConsumerState<EarningsScreen>
     return Scaffold(
       appBar: AppBar(
         title: const Text('EARNINGS'),
+        actions: const [NotificationBell()],
       ),
       body: Column(
         children: [
@@ -469,34 +483,69 @@ class _EarningsScreenState extends ConsumerState<EarningsScreen>
               ],
             ),
           ),
-          Row(
-            children: [
-              _buildStatItemSmall(
-                Icons.monetization_on_outlined,
-                'Total Investment',
-                '\$${totalInvestment.toStringAsFixed(2)}',
-              ),
-              _buildStatItemSmall(
-                Icons.trending_up_rounded,
-                'Daily Profit',
-                '\$${totalDailyProfit.toStringAsFixed(2)}',
-              ),
-            ],
-          ),
-          AppSpacing.hMd,
-          Row(
-            children: [
-              _buildStatItemSmall(
-                Icons.account_balance_wallet_rounded,
-                'Referral Balance',
-                '\$${referralBalance.toStringAsFixed(2)}',
-              ),
-              _buildStatItemSmall(
-                Icons.emoji_events_rounded,
-                'Total Referral',
-                '\$${totalReferralEarnings.toStringAsFixed(2)}',
-              ),
-            ],
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final isDesktop = constraints.maxWidth >= 600;
+              if (isDesktop) {
+                return Row(
+                  children: [
+                    _buildStatItemSmall(
+                      Icons.monetization_on_outlined,
+                      'Total Investment',
+                      '\$${totalInvestment.toStringAsFixed(2)}',
+                    ),
+                    _buildStatItemSmall(
+                      Icons.trending_up_rounded,
+                      'Daily Profit',
+                      '\$${totalDailyProfit.toStringAsFixed(2)}',
+                    ),
+                    _buildStatItemSmall(
+                      Icons.account_balance_wallet_rounded,
+                      'Referral Balance',
+                      '\$${referralBalance.toStringAsFixed(2)}',
+                    ),
+                    _buildStatItemSmall(
+                      Icons.emoji_events_rounded,
+                      'Total Referral',
+                      '\$${totalReferralEarnings.toStringAsFixed(2)}',
+                    ),
+                  ],
+                );
+              }
+              return Column(
+                children: [
+                  Row(
+                    children: [
+                      _buildStatItemSmall(
+                        Icons.monetization_on_outlined,
+                        'Total Investment',
+                        '\$${totalInvestment.toStringAsFixed(2)}',
+                      ),
+                      _buildStatItemSmall(
+                        Icons.trending_up_rounded,
+                        'Daily Profit',
+                        '\$${totalDailyProfit.toStringAsFixed(2)}',
+                      ),
+                    ],
+                  ),
+                  AppSpacing.hMd,
+                  Row(
+                    children: [
+                      _buildStatItemSmall(
+                        Icons.account_balance_wallet_rounded,
+                        'Referral Balance',
+                        '\$${referralBalance.toStringAsFixed(2)}',
+                      ),
+                      _buildStatItemSmall(
+                        Icons.emoji_events_rounded,
+                        'Total Referral',
+                        '\$${totalReferralEarnings.toStringAsFixed(2)}',
+                      ),
+                    ],
+                  ),
+                ],
+              );
+            },
           ),
         ],
       ),
@@ -1344,6 +1393,7 @@ class _LsscScreenState extends ConsumerState<LsscScreen> {
         elevation: 0.5,
         backgroundColor: const Color(0xFF0F0F0F),
         shadowColor: const Color(0xFF00C853).withValues(alpha: 0.3),
+        actions: const [NotificationBell()],
       ),
       backgroundColor: const Color(0xFF0A0A0A),
       body: purchasesAsync.when(
@@ -2276,6 +2326,7 @@ class _TeamScreenState extends ConsumerState<TeamScreen> {
       appBar: AppBar(
         title: const Text('MY TEAM', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
         centerTitle: true,
+        actions: const [NotificationBell()],
       ),
       body: statsAsync.when(
         data: (data) {
@@ -3791,6 +3842,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       appBar: AppBar(
         title: const Text('PORTFOLIO'),
         actions: [
+          const NotificationBell(),
           AppIconButton(
             icon: Icons.settings_outlined,
             onPressed: () => context.push('/settings'),
@@ -3802,6 +3854,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           await ref.read(authProvider.notifier).refreshUser();
           await ref.refresh(transactionsProvider(userId).future);
           ref.refresh(balanceProvider(userId));
+          ref.invalidate(messagesProvider(userId));
+          ref.invalidate(unreadCountProvider(userId));
         },
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
@@ -4241,7 +4295,10 @@ class ActivityHistoryScreen extends ConsumerWidget {
     final activityAsync = ref.watch(activityProvider(userId));
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Activity History')),
+      appBar: AppBar(
+        title: const Text('Activity History'),
+        actions: const [NotificationBell()],
+      ),
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(activityProvider(userId));
@@ -4339,6 +4396,227 @@ class ActivityHistoryScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+}
+
+// --- Messages / Notifications Screen ---
+class MessagesScreen extends ConsumerWidget {
+  const MessagesScreen({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final auth = ref.watch(authProvider);
+    final userId = auth.userId ?? "";
+    final messagesAsync = ref.watch(messagesProvider(userId));
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Notifications'),
+        actions: [
+          TextButton(
+            onPressed: () async {
+              await ref.read(apiServiceProvider).markAllMessagesRead(userId);
+              ref.invalidate(messagesProvider(userId));
+              ref.invalidate(unreadCountProvider(userId));
+            },
+            child: const Text('Mark all read'),
+          ),
+        ],
+      ),
+      body: RefreshIndicator(
+        onRefresh: () async {
+          ref.invalidate(messagesProvider(userId));
+          ref.invalidate(unreadCountProvider(userId));
+          await ref.refresh(messagesProvider(userId).future);
+        },
+        child: messagesAsync.when(
+          data: (items) {
+            if (items.isEmpty) {
+              return ListView(
+                children: const [
+                  SizedBox(height: 120),
+                  Center(child: Text('No notifications yet', style: TextStyle(color: Colors.white38))),
+                ],
+              );
+            }
+            return ListView(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+              children: [
+                ...items.asMap().entries.map((entry) {
+                  return AnimatedScaleIn(
+                    delay: entry.key * 30,
+                    child: _MessageItem(
+                      message: entry.value,
+                      onTap: () async {
+                        if (entry.value['read'] == false) {
+                          final msgId = entry.value['_id'];
+                          await ref.read(apiServiceProvider).markMessageRead(msgId.toString());
+                          ref.invalidate(messagesProvider(userId));
+                          ref.invalidate(unreadCountProvider(userId));
+                        }
+                      },
+                    ),
+                  );
+                }),
+              ],
+            );
+          },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, s) => Center(
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.error_outline, size: 48, color: Colors.grey),
+                  const SizedBox(height: 16),
+                  const Text('Failed to load notifications', style: TextStyle(color: Colors.white54)),
+                  const SizedBox(height: 12),
+                  TextButton(
+                    onPressed: () => ref.invalidate(messagesProvider(userId)),
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MessageItem extends StatelessWidget {
+  final dynamic message;
+  final VoidCallback onTap;
+  const _MessageItem({required this.message, required this.onTap});
+
+  IconData _iconForType(String type) {
+    switch (type) {
+      case 'deposit':
+        return Icons.call_received;
+      case 'withdrawal':
+        return Icons.call_made;
+      case 'commission':
+        return Icons.redeem;
+      case 'system':
+        return Icons.info_outline;
+      default:
+        return Icons.notifications_outlined;
+    }
+  }
+
+  Color _colorForType(String type) {
+    switch (type) {
+      case 'deposit':
+        return AppColors.success;
+      case 'withdrawal':
+        return AppColors.warning;
+      case 'commission':
+        return AppColors.accentBlue;
+      case 'system':
+        return AppColors.textMuted;
+      default:
+        return AppColors.textMuted;
+    }
+  }
+
+  Color _bgForType(String type) {
+    switch (type) {
+      case 'deposit':
+        return AppColors.overlayGreen;
+      case 'withdrawal':
+        return AppColors.overlayOrange;
+      case 'commission':
+        return AppColors.overlayBlue;
+      case 'system':
+        return AppColors.surfaceCardAlt;
+      default:
+        return AppColors.surfaceCardAlt;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bool isRead = message['read'] == true;
+    final String type = message['type'] ?? 'system';
+    final String title = message['title'] ?? '';
+    final String body = message['body'] ?? '';
+    final int createdAt = message['createdAt'] ?? 0;
+    final timeStr = _formatTime(createdAt);
+
+    return GestureDetector(
+      onTap: onTap,
+      child: AppCard(
+        margin: const EdgeInsets.only(bottom: 10),
+        borderRadius: 15,
+        padding: EdgeInsets.zero,
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(15),
+            border: !isRead
+                ? Border.all(color: AppColors.primary.withValues(alpha: 0.3))
+                : null,
+          ),
+          child: ListTile(
+            leading: CircleAvatar(
+              backgroundColor: _bgForType(type),
+              child: Icon(_iconForType(type), color: _colorForType(type), size: 18),
+            ),
+            title: Row(
+              children: [
+                if (!isRead)
+                  Container(
+                    width: 8,
+                    height: 8,
+                    margin: const EdgeInsets.only(right: 6),
+                    decoration: const BoxDecoration(
+                      color: AppColors.primary,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: GoogleFonts.poppins(
+                      fontWeight: isRead ? FontWeight.w500 : FontWeight.w700,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 2),
+                Text(
+                  body,
+                  style: GoogleFonts.poppins(fontSize: 12, color: AppColors.textTertiary),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  timeStr,
+                  style: GoogleFonts.poppins(fontSize: 10, color: AppColors.textMuted),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _formatTime(int timestamp) {
+    if (timestamp == 0) return '';
+    final dt = DateTime.fromMillisecondsSinceEpoch(timestamp);
+    final now = DateTime.now();
+    final diff = now.difference(dt);
+    if (diff.inSeconds < 60) return 'Just now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    if (diff.inDays < 7) return '${diff.inDays}d ago';
+    return '${dt.month}/${dt.day}';
   }
 }
 
@@ -4570,7 +4848,10 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
     final networksAsync = ref.watch(networksProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('DEPOSIT ASSETS')),
+      appBar: AppBar(
+        title: const Text('DEPOSIT ASSETS'),
+        actions: const [NotificationBell()],
+      ),
       body: networksAsync.when(
         data: (netList) {
           networks = netList;
@@ -4885,6 +5166,8 @@ class _WithdrawScreenState extends ConsumerState<WithdrawScreen> {
         ref.invalidate(withdrawalsProvider(userId));
         ref.invalidate(withdrawableBalanceProvider(userId));
         ref.invalidate(activityProvider(userId));
+        ref.invalidate(messagesProvider(userId));
+        ref.invalidate(unreadCountProvider(userId));
       }
     } catch (e) {
       String errorMsg = "Withdrawal failed";
@@ -4930,6 +5213,7 @@ class _WithdrawScreenState extends ConsumerState<WithdrawScreen> {
       backgroundColor: const Color(0xFF0F0F0F),
       appBar: AppBar(
         title: const Text('WITHDRAW'),
+        actions: const [NotificationBell()],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
@@ -5531,6 +5815,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       appBar: AppBar(
         title: const Text('PROFILE'),
         actions: [
+          const NotificationBell(),
           IconButton(
             icon: const Icon(Icons.sync, color: Colors.greenAccent),
             tooltip: 'Refresh',
@@ -5839,7 +6124,10 @@ class AdminDashboardScreen extends ConsumerWidget {
     final statsAsync = ref.watch(adminStatsProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('ADMIN CONSOLE')),
+      appBar: AppBar(
+        title: const Text('ADMIN CONSOLE'),
+        actions: const [NotificationBell()],
+      ),
       body: statsAsync.when(
         data: (stats) => Padding(
           padding: const EdgeInsets.all(20.0),
@@ -5940,7 +6228,10 @@ class UserManagementScreen extends ConsumerWidget {
     final usersAsync = ref.watch(usersProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('MANAGE USERS')),
+      appBar: AppBar(
+        title: const Text('MANAGE USERS'),
+        actions: const [NotificationBell()],
+      ),
       body: usersAsync.when(
         data: (users) => ListView.builder(
           padding: const EdgeInsets.all(16),
@@ -6006,6 +6297,7 @@ class _PendingWithdrawalsScreenState extends ConsumerState<PendingWithdrawalsScr
       appBar: AppBar(
         title: const Text('PENDING WITHDRAWALS'),
         actions: [
+          const NotificationBell(),
           if (pendingAsync.hasValue && pendingAsync.value!.isNotEmpty)
             AppIconButton(
               icon: _isProcessingAll ? Icons.hourglass_empty : Icons.bolt,

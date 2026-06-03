@@ -1,6 +1,7 @@
 import { mutation, action } from "./_generated/server";
 import { v } from "convex/values";
 import { api } from "./_generated/api";
+import { hash } from "./password";
 
 export const requestPasswordReset = mutation({
   args: { email: v.string() },
@@ -239,7 +240,8 @@ export const resetTransactionPassword = mutation({
       throw new Error("This reset link has expired. Please request a new one.");
     }
 
-    await ctx.db.patch(resetToken.userId, { transactionPassword: args.newPassword });
+    const hashed = await hash(args.newPassword);
+    await ctx.db.patch(resetToken.userId, { transactionPassword: hashed });
     await ctx.db.patch(resetToken._id, { used: true });
 
     return true;
@@ -279,7 +281,8 @@ export const resetPassword = mutation({
       throw new Error("User not found");
     }
 
-    await ctx.db.patch(user._id, { password: args.newPassword });
+    const hashed = await hash(args.newPassword);
+    await ctx.db.patch(user._id, { password: hashed });
     await ctx.db.patch(resetToken._id, { used: true });
 
     return true;

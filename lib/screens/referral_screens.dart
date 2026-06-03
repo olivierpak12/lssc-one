@@ -6,10 +6,12 @@ import 'package:share_plus/share_plus.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../providers/referral_provider.dart';
 import '../providers/auth_provider.dart';
+import '../providers/wallet_provider.dart';
 import '../models/referral.dart';
 import '../theme/app_colors.dart';
 import '../components/app_button.dart';
 import '../components/app_card.dart';
+import '../components/notification_bell.dart';
 
 class ReferralDashboardScreen extends ConsumerWidget {
   const ReferralDashboardScreen({super.key});
@@ -21,6 +23,7 @@ class ReferralDashboardScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text('AFFILIATE PROGRAM', style: GoogleFonts.orbitron(fontSize: 16, fontWeight: FontWeight.bold)),
+        actions: const [NotificationBell()],
       ),
       body: RefreshIndicator(
         onRefresh: () => ref.refresh(referralStatsProvider.future),
@@ -249,6 +252,7 @@ class TeamMembersScreen extends ConsumerWidget {
       child: Scaffold(
         appBar: AppBar(
           title: const Text('MY TEAM'),
+          actions: const [NotificationBell()],
           bottom: const TabBar(
             tabs: [
               Tab(text: 'Team A'),
@@ -368,7 +372,10 @@ class ReferralEarningsScreen extends ConsumerWidget {
     final earningsAsync = ref.watch(referralEarningsProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('EARNING HISTORY')),
+      appBar: AppBar(
+        title: const Text('EARNING HISTORY'),
+        actions: const [NotificationBell()],
+      ),
       body: earningsAsync.when(
         data: (earnings) {
           if (earnings.isEmpty) return Center(child: Text('No earnings yet.', style: GoogleFonts.poppins(color: AppColors.textMuted)));
@@ -432,7 +439,10 @@ class LeaderboardScreen extends ConsumerWidget {
     final leaderboardAsync = ref.watch(leaderboardProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('TOP EARNERS')),
+      appBar: AppBar(
+        title: const Text('TOP EARNERS'),
+        actions: const [NotificationBell()],
+      ),
       body: leaderboardAsync.when(
         data: (list) {
           return ListView.builder(

@@ -1,6 +1,7 @@
 import { mutation, query, MutationCtx } from "./_generated/server";
 import { v } from "convex/values";
 import { Id } from "./_generated/dataModel";
+import { hash, verify } from "./password";
 
 /**
  * Verifies a Google ID Token using Google's TokenInfo API
@@ -132,11 +133,14 @@ export const register = mutation({
       codeExists = await ctx.db.query("users").withIndex("by_referralCode", q => q.eq("referralCode", myReferralCode)).unique();
     }
 
+    const hashedPassword = args.password ? await hash(args.password) : "GOOGLE_AUTH";
+    const hashedTransactionPassword = await hash(args.transactionPassword);
+
     const userId = await ctx.db.insert("users", {
       username: args.username,
       email: args.email,
-      password: args.password ?? "GOOGLE_AUTH",
-      transactionPassword: args.transactionPassword,
+      password: hashedPassword,
+      transactionPassword: hashedTransactionPassword,
       invitationCode: args.invitationCode ?? "",
       myInviteCode: myInviteCode,
       referralCode: myReferralCode,
@@ -198,7 +202,7 @@ export const login = query({
       .withIndex("by_email", (q) => q.eq("email", args.email))
       .unique();
 
-    if (!user || user.password !== args.password) {
+    if (!user || !(await verify(args.password, user.password))) {
       throw new Error("Invalid credentials");
     }
 

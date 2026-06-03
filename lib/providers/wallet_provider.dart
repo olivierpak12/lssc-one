@@ -133,6 +133,32 @@ final activityProvider = FutureProvider.family<List<dynamic>, String>((ref, user
   return combined;
 });
 
+final messagesProvider = FutureProvider.family<List<dynamic>, String>((ref, userId) async {
+  if (userId.isEmpty) return [];
+  final apiService = ref.read(apiServiceProvider);
+  try {
+    final response = await apiService.getMessages(userId);
+    return (response.data is List) ? response.data as List<dynamic> : [];
+  } catch (e) {
+    print("Error fetching messages: $e");
+    return [];
+  }
+});
+
+final unreadCountProvider = FutureProvider.family<int, String>((ref, userId) async {
+  if (userId.isEmpty) return 0;
+  final apiService = ref.read(apiServiceProvider);
+  try {
+    final response = await apiService.getUnreadCount(userId);
+    if (response.data is List) {
+      return (response.data as List).length;
+    }
+    return 0;
+  } catch (e) {
+    return 0;
+  }
+});
+
 final syncProvider = FutureProvider.family<int, String>((ref, userId) async {
   if (userId.isEmpty) return 0;
   final apiService = ref.read(apiServiceProvider);

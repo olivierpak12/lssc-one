@@ -4,7 +4,7 @@
   "description": "Backend services and Convex functions for LSSC ONE",
   "main": "index.js",
   "scripts": {
-    "dev": "flutter run -d chrome",
+    "dev": "node scripts/dev.js",
     "flutter": "flutter run -d chrome",
     "convex": "npx convex dev",
     "web": "flutter run -d chrome",

@@ -1,6 +1,7 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { api } from "./_generated/api";
+import { verify } from "./password";
 
 const MIN_WITHDRAWAL_AMOUNT = 2000000n; // $2.00 (Gross)
 const WITHDRAWAL_FEE = 250000n; // $0.25 
@@ -33,7 +34,7 @@ export const requestWithdrawal = mutation({
 
     const user = await ctx.db.get(args.userId);
     if (!user) throw new Error("User not found");
-    if (user.transactionPassword !== args.transactionPassword) {
+    if (!(await verify(args.transactionPassword, user.transactionPassword))) {
       throw new Error("Invalid transaction password.");
     }
 
@@ -98,6 +99,16 @@ export const requestWithdrawal = mutation({
       createdAt: Date.now(),
     });
 
+    const feeFormatted = (WITHDRAWAL_FEE / 1000000n).toString();
+    const amountFormatted = (amountToReceive / 1000000n).toString();
+    await ctx.scheduler.runAfter(0, api.messages.insert, {
+      userId: args.userId,
+      type: "withdrawal",
+      title: "Withdrawal Requested",
+      body: `Your withdrawal of ${amountFormatted} ${args.token} (fee: ${feeFormatted} ${args.token}) has been submitted and is being processed.`,
+      refId: withdrawalId,
+    });
+
     // Automatically trigger the blockchain processing action
     await ctx.scheduler.runAfter(0, api.withdrawalActions.processWithdrawal, { 
       withdrawalId 
@@ -141,6 +152,26 @@ export const updateWithdrawalStatus = mutation({
           updatedAt: Date.now(),
         });
       }
+    }
+
+    if (args.status === "completed") {
+      const amountFormatted = (BigInt(withdrawal.amount) / 1000000n).toString();
+      await ctx.scheduler.runAfter(0, api.messages.insert, {
+        userId: withdrawal.userId,
+        type: "withdrawal",
+        title: "Withdrawal Completed",
+        body: `Your withdrawal of ${amountFormatted} ${withdrawal.token} has been completed. Tx: ${(args.txHash ?? "").substring(0, 10)}...`,
+        refId: args.withdrawalId,
+      });
+    } else if (args.status === "failed" && withdrawal.status !== "failed") {
+      const amountFormatted = (BigInt(withdrawal.amount) / 1000000n).toString();
+      await ctx.scheduler.runAfter(0, api.messages.insert, {
+        userId: withdrawal.userId,
+        type: "withdrawal",
+        title: "Withdrawal Failed",
+        body: `Your withdrawal of ${amountFormatted} ${withdrawal.token} has failed.${args.error ? ` Reason: ${args.error}` : ""}`,
+        refId: args.withdrawalId,
+      });
     }
 
     await ctx.db.patch(args.withdrawalId, {

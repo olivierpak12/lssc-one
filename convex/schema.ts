@@ -149,4 +149,14 @@ export default defineSchema({
     purchasedAt: v.number(),
     lastClaimedAt: v.optional(v.number()),
   }).index("by_userId", ["userId"]),
+
+  messages: defineTable({
+    userId: v.id("users"),
+    type: v.union(v.literal("deposit"), v.literal("withdrawal"), v.literal("commission"), v.literal("system")),
+    title: v.string(),
+    body: v.string(),
+    refId: v.optional(v.string()),
+    read: v.boolean(),
+    createdAt: v.number(),
+  }).index("by_userId", ["userId"]).index("by_userId_read", ["userId", "read"]),
 });

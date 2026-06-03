@@ -196,6 +196,24 @@ class ApiService {
     return await _dio.get('/run/networks:getAllNetworks');
   }
 
+  // --- Message Methods ---
+
+  Future<Response> getMessages(String userId) async {
+    return await _dio.get('/run/messages:list', queryParameters: {'userId': userId});
+  }
+
+  Future<Response> getUnreadCount(String userId) async {
+    return await _dio.get('/run/messages:unreadCount', queryParameters: {'userId': userId});
+  }
+
+  Future<Response> markMessageRead(String messageId) async {
+    return await _dio.post('/mutation/messages:markRead', data: {'messageId': messageId});
+  }
+
+  Future<Response> markAllMessagesRead(String userId) async {
+    return await _dio.post('/mutation/messages:markAllRead', data: {'userId': userId});
+  }
+
   // --- Team Methods ---
 
   Future<Response> getTeamStats(String userId, String period) async {

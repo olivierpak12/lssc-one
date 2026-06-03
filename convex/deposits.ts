@@ -1,6 +1,7 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { Id } from "./_generated/dataModel";
+import { api } from "./_generated/api";
 
 export const listDeposits = query({
   args: { userId: v.id("users") },
@@ -50,6 +51,15 @@ export const recordDeposit = mutation({
       createdAt: Date.now(),
     });
 
+    const amountFormatted = (BigInt(args.amount) / 1000000n).toString();
+    await ctx.scheduler.runAfter(0, api.messages.insert, {
+      userId: args.userId,
+      type: "deposit",
+      title: "Deposit Received",
+      body: `Your deposit of ${amountFormatted} ${args.token} has been received and is pending confirmation.`,
+      refId: id,
+    });
+
     return { id, status: "pending", isNew: true };
   },
 });
@@ -70,6 +80,35 @@ export const updateStatus = mutation({
 
     const { depositId, ...patch } = args;
     await ctx.db.patch(depositId, patch);
+
+    if (args.status === "confirmed") {
+      const amountFormatted = (BigInt(deposit.amount) / 1000000n).toString();
+      await ctx.scheduler.runAfter(0, api.messages.insert, {
+        userId: deposit.userId,
+        type: "deposit",
+        title: "Deposit Confirmed",
+        body: `Your deposit of ${amountFormatted} ${deposit.token} has been confirmed and added to your balance.`,
+        refId: depositId,
+      });
+    } else if (args.status === "failed") {
+      const amountFormatted = (BigInt(deposit.amount) / 1000000n).toString();
+      await ctx.scheduler.runAfter(0, api.messages.insert, {
+        userId: deposit.userId,
+        type: "deposit",
+        title: "Deposit Failed",
+        body: `Your deposit of ${amountFormatted} ${deposit.token} has failed.`,
+        refId: depositId,
+      });
+    } else if (args.status === "swept") {
+      const amountFormatted = (BigInt(deposit.amount) / 1000000n).toString();
+      await ctx.scheduler.runAfter(0, api.messages.insert, {
+        userId: deposit.userId,
+        type: "deposit",
+        title: "Deposit Secured",
+        body: `Your deposit of ${amountFormatted} ${deposit.token} has been swept to our secure wallet.`,
+        refId: depositId,
+      });
+    }
 
     if (args.status === "confirmed" && deposit.status === "pending") {
       const balance = await ctx.db
