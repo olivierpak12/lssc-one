@@ -21,8 +21,10 @@ const getCorsOrigin = (origin: string | null): string => {
 
 const corsHeaders = (origin: string | null) => ({
   "Access-Control-Allow-Origin": getCorsOrigin(origin),
-  "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
+  "Access-Control-Allow-Methods": "POST, GET, OPTIONS, PUT, DELETE",
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
+  "Access-Control-Allow-Credentials": "true",
+  "Access-Control-Max-Age": "86400",
 });
 
 const jsonResponse = (data: any, status: number = 200, origin?: string | null) => {
@@ -35,45 +37,54 @@ const jsonResponse = (data: any, status: number = 200, origin?: string | null) =
   });
 };
 
-const corsResponse = (origin?: string | null) => new Response(null, { status: 204, headers: corsHeaders(origin ?? null) });
+const corsResponse = (origin?: string | null) =>
+  new Response(null, { status: 204, headers: corsHeaders(origin ?? null) });
 
 const getOrigin = (request: Request) => request.headers.get("Origin");
 
-http.route({ path: "/mutation/users:register", method: "OPTIONS", handler: httpAction(async (ctx, request) => corsResponse(getOrigin(request))) });
-http.route({ path: "/run/users:login", method: "OPTIONS", handler: httpAction(async (ctx, request) => corsResponse(getOrigin(request))) });
-http.route({ path: "/run/users:getUser", method: "OPTIONS", handler: httpAction(async (ctx, request) => corsResponse(getOrigin(request))) });
-http.route({ path: "/run/users:listUsers", method: "OPTIONS", handler: httpAction(async (ctx, request) => corsResponse(getOrigin(request))) });
-http.route({ path: "/mutation/users:setRole", method: "OPTIONS", handler: httpAction(async (ctx, request) => corsResponse(getOrigin(request))) });
-http.route({ path: "/mutation/users:loginWithGoogle", method: "OPTIONS", handler: httpAction(async (ctx, request) => corsResponse(getOrigin(request))) });
-http.route({ path: "/mutation/users:verifyEmail", method: "OPTIONS", handler: httpAction(async (ctx, request) => corsResponse(getOrigin(request))) });
-http.route({ path: "/run/users:checkReferralCode", method: "OPTIONS", handler: httpAction(async (ctx, request) => corsResponse(getOrigin(request))) });
-http.route({ path: "/run/wallets:getWallet", method: "OPTIONS", handler: httpAction(async (ctx, request) => corsResponse(getOrigin(request))) });
-http.route({ path: "/action/walletActions:generateWallet", method: "OPTIONS", handler: httpAction(async (ctx, request) => corsResponse(getOrigin(request))) });
-http.route({ path: "/run/balances:getTotalUsdtBalance", method: "OPTIONS", handler: httpAction(async (ctx, request) => corsResponse(getOrigin(request))) });
-http.route({ path: "/run/balances:getWithdrawableBalance", method: "OPTIONS", handler: httpAction(async (ctx, request) => corsResponse(getOrigin(request))) });
-http.route({ path: "/run/deposits:listDeposits", method: "OPTIONS", handler: httpAction(async (ctx, request) => corsResponse(getOrigin(request))) });
-http.route({ path: "/run/withdrawals:getWithdrawals", method: "OPTIONS", handler: httpAction(async (ctx, request) => corsResponse(getOrigin(request))) });
-http.route({ path: "/mutation/withdrawals:requestWithdrawal", method: "OPTIONS", handler: httpAction(async (ctx, request) => corsResponse(getOrigin(request))) });
-http.route({ path: "/action/etherscanActions:syncUserDeposits", method: "OPTIONS", handler: httpAction(async (ctx, request) => corsResponse(getOrigin(request))) });
-http.route({ path: "/run/admin:getStats", method: "OPTIONS", handler: httpAction(async (ctx, request) => corsResponse(getOrigin(request))) });
-http.route({ path: "/run/networks:getActiveNetworks", method: "OPTIONS", handler: httpAction(async (ctx, request) => corsResponse(getOrigin(request))) });
-http.route({ path: "/run/teams:getTeamStats", method: "OPTIONS", handler: httpAction(async (ctx, request) => corsResponse(getOrigin(request))) });
-http.route({ path: "/run/bikes:getUserPurchases", method: "OPTIONS", handler: httpAction(async (ctx, request) => corsResponse(getOrigin(request))) });
-http.route({ path: "/mutation/bikes:buyBike", method: "OPTIONS", handler: httpAction(async (ctx, request) => corsResponse(getOrigin(request))) });
-http.route({ path: "/mutation/bikes:claimDailyEarnings", method: "OPTIONS", handler: httpAction(async (ctx, request) => corsResponse(getOrigin(request))) });
-http.route({ path: "/mutation/users:requestPasswordReset", method: "OPTIONS", handler: httpAction(async (ctx, request) => corsResponse(getOrigin(request))) });
-http.route({ path: "/mutation/users:resetPassword", method: "OPTIONS", handler: httpAction(async (ctx, request) => corsResponse(getOrigin(request))) });
-http.route({ path: "/mutation/users:requestTransactionPasswordReset", method: "OPTIONS", handler: httpAction(async (ctx, request) => corsResponse(getOrigin(request))) });
-http.route({ path: "/mutation/users:resetTransactionPassword", method: "OPTIONS", handler: httpAction(async (ctx, request) => corsResponse(getOrigin(request))) });
+const preflightHandler = httpAction(async (_ctx, request) =>
+  corsResponse(getOrigin(request))
+);
 
-http.route({ path: "/action/withdrawalActions:processWithdrawal", method: "OPTIONS", handler: httpAction(async (ctx, request) => corsResponse(getOrigin(request))) });
-http.route({ path: "/action/withdrawalActions:processAllPending", method: "OPTIONS", handler: httpAction(async (ctx, request) => corsResponse(getOrigin(request))) });
-
-http.route({ path: "/run/referrals:getTeamStats", method: "OPTIONS", handler: httpAction(async (ctx, request) => corsResponse(getOrigin(request))) });
-http.route({ path: "/run/referrals:getTeamMembers", method: "OPTIONS", handler: httpAction(async (ctx, request) => corsResponse(getOrigin(request))) });
-http.route({ path: "/run/referrals:getReferralEarningsHistory", method: "OPTIONS", handler: httpAction(async (ctx, request) => corsResponse(getOrigin(request))) });
-http.route({ path: "/run/referrals:getLeaderboard", method: "OPTIONS", handler: httpAction(async (ctx, request) => corsResponse(getOrigin(request))) });
-http.route({ path: "/run/networks:getAllNetworks", method: "OPTIONS", handler: httpAction(async (ctx, request) => corsResponse(getOrigin(request))) });
+http.route({ path: "/mutation/users:register", method: "OPTIONS", handler: preflightHandler });
+http.route({ path: "/run/users:login", method: "OPTIONS", handler: preflightHandler });
+http.route({ path: "/run/users:getUser", method: "OPTIONS", handler: preflightHandler });
+http.route({ path: "/run/users:listUsers", method: "OPTIONS", handler: preflightHandler });
+http.route({ path: "/mutation/users:setRole", method: "OPTIONS", handler: preflightHandler });
+http.route({ path: "/mutation/users:loginWithGoogle", method: "OPTIONS", handler: preflightHandler });
+http.route({ path: "/mutation/users:verifyEmail", method: "OPTIONS", handler: preflightHandler });
+http.route({ path: "/run/users:checkReferralCode", method: "OPTIONS", handler: preflightHandler });
+http.route({ path: "/run/wallets:getWallet", method: "OPTIONS", handler: preflightHandler });
+http.route({ path: "/action/walletActions:generateWallet", method: "OPTIONS", handler: preflightHandler });
+http.route({ path: "/run/balances:getTotalUsdtBalance", method: "OPTIONS", handler: preflightHandler });
+http.route({ path: "/run/balances:getWithdrawableBalance", method: "OPTIONS", handler: preflightHandler });
+http.route({ path: "/run/deposits:listDeposits", method: "OPTIONS", handler: preflightHandler });
+http.route({ path: "/run/withdrawals:getWithdrawals", method: "OPTIONS", handler: preflightHandler });
+http.route({ path: "/mutation/withdrawals:requestWithdrawal", method: "OPTIONS", handler: preflightHandler });
+http.route({ path: "/action/etherscanActions:syncUserDeposits", method: "OPTIONS", handler: preflightHandler });
+http.route({ path: "/run/admin:getStats", method: "OPTIONS", handler: preflightHandler });
+http.route({ path: "/run/admin:getPendingWithdrawals", method: "OPTIONS", handler: preflightHandler });
+http.route({ path: "/run/networks:getActiveNetworks", method: "OPTIONS", handler: preflightHandler });
+http.route({ path: "/run/teams:getTeamStats", method: "OPTIONS", handler: preflightHandler });
+http.route({ path: "/run/bikes:getUserPurchases", method: "OPTIONS", handler: preflightHandler });
+http.route({ path: "/mutation/bikes:buyBike", method: "OPTIONS", handler: preflightHandler });
+http.route({ path: "/mutation/bikes:claimDailyEarnings", method: "OPTIONS", handler: preflightHandler });
+http.route({ path: "/mutation/users:requestPasswordReset", method: "OPTIONS", handler: preflightHandler });
+http.route({ path: "/mutation/users:resetPassword", method: "OPTIONS", handler: preflightHandler });
+http.route({ path: "/mutation/users:requestTransactionPasswordReset", method: "OPTIONS", handler: preflightHandler });
+http.route({ path: "/mutation/users:resetTransactionPassword", method: "OPTIONS", handler: preflightHandler });
+http.route({ path: "/action/withdrawalActions:processWithdrawal", method: "OPTIONS", handler: preflightHandler });
+http.route({ path: "/action/withdrawalActions:processAllPending", method: "OPTIONS", handler: preflightHandler });
+http.route({ path: "/run/referrals:getTeamStats", method: "OPTIONS", handler: preflightHandler });
+http.route({ path: "/run/referrals:getTeamMembers", method: "OPTIONS", handler: preflightHandler });
+http.route({ path: "/run/referrals:getReferralEarningsHistory", method: "OPTIONS", handler: preflightHandler });
+http.route({ path: "/run/referrals:getLeaderboard", method: "OPTIONS", handler: preflightHandler });
+http.route({ path: "/run/networks:getAllNetworks", method: "OPTIONS", handler: preflightHandler });
+http.route({ path: "/run/messages:list", method: "OPTIONS", handler: preflightHandler });
+http.route({ path: "/run/messages:unreadCount", method: "OPTIONS", handler: preflightHandler });
+http.route({ path: "/mutation/messages:markRead", method: "OPTIONS", handler: preflightHandler });
+http.route({ path: "/mutation/messages:markAllRead", method: "OPTIONS", handler: preflightHandler });
+http.route({ path: "/mutation/messages:remove", method: "OPTIONS", handler: preflightHandler });
 
 http.route({
   path: "/mutation/users:register",
@@ -338,7 +349,7 @@ http.route({
       const { searchParams } = new URL(request.url);
       const userId = searchParams.get("userId");
       if (!userId) return jsonResponse("Missing userId", 400, origin);
-      
+
       const balance = await ctx.runQuery(api.balances.getTotalUsdtBalance, { userId: userId as any });
       return jsonResponse({ balance }, 200, origin);
     } catch (e: any) {
@@ -493,6 +504,20 @@ http.route({
 });
 
 http.route({
+  path: "/run/admin:getPendingWithdrawals",
+  method: "GET",
+  handler: httpAction(async (ctx, request) => {
+    const origin = getOrigin(request);
+    try {
+      const result = await ctx.runQuery(api.admin.getPendingWithdrawals);
+      return jsonResponse(result, 200, origin);
+    } catch (e: any) {
+      return jsonResponse(e.message, 400, origin);
+    }
+  }),
+});
+
+http.route({
   path: "/run/referrals:getTeamStats",
   method: "GET",
   handler: httpAction(async (ctx, request) => {
@@ -601,12 +626,6 @@ http.route({
   }),
 });
 
-http.route({ path: "/run/messages:list", method: "OPTIONS", handler: httpAction(async (ctx, request) => corsResponse(getOrigin(request))) });
-http.route({ path: "/run/messages:unreadCount", method: "OPTIONS", handler: httpAction(async (ctx, request) => corsResponse(getOrigin(request))) });
-http.route({ path: "/mutation/messages:markRead", method: "OPTIONS", handler: httpAction(async (ctx, request) => corsResponse(getOrigin(request))) });
-http.route({ path: "/mutation/messages:markAllRead", method: "OPTIONS", handler: httpAction(async (ctx, request) => corsResponse(getOrigin(request))) });
-http.route({ path: "/mutation/messages:remove", method: "OPTIONS", handler: httpAction(async (ctx, request) => corsResponse(getOrigin(request))) });
-
 http.route({
   path: "/run/messages:list",
   method: "GET",
@@ -663,7 +682,7 @@ http.route({
     const origin = getOrigin(request);
     const body = await request.json();
     try {
-      await ctx.runMutation(api.messages.markAllRead, body);
+      await ctx.runMutation(api.messages.markAllRead, { userId: body.userId });
       return jsonResponse({ success: true }, 200, origin);
     } catch (e: any) {
       return jsonResponse(e.message, 400, origin);
