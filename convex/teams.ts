@@ -4,7 +4,7 @@ import { v } from "convex/values";
 const TIER_PERCENTAGES: Record<number, number> = {
   1: 18,
   2: 3,
-  3: 2,
+  3: 1,
 };
 
 export const processDepositRewards = mutation({
