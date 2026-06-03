@@ -36,7 +36,7 @@ export const processWithdrawal = action({
       const network: any = await ctx.runQuery(api.networks.getNetworkInfo, { chainId: withdrawal.chainId });
       if (!network) throw new Error(`Network not supported (ChainId: ${withdrawal.chainId})`);
 
-      const rpcUrl = process.env[network.rpcUrl] || network.defaultRpc;
+      const rpcUrl = process.env[network.rpcUrl] || process.env[network.defaultRpc];
       const usdtAddress = process.env[network.usdtContractEnv] || network.usdtContract;
       const hotWalletKey = process.env.HOT_WALLET_PRIVATE_KEY;
 

@@ -21,7 +21,7 @@ export const processAutoSweep = action({
     const network: any = await ctx.runQuery(api.networks.getNetworkInfo, { chainId: deposit.chainId });
     if (!walletData || !network) return { success: false, message: "Missing wallet/network info" };
 
-    const rpcUrl = process.env[network.rpcUrl] || (network as any).defaultRpc;
+    const rpcUrl = process.env[network.rpcUrl] || process.env[(network as any).defaultRpc];
     const usdtAddress = deposit.tokenContract || process.env[(network as any).usdtContractEnv] || network.usdtContract;
 
     if (!rpcUrl || !usdtAddress) {
