@@ -61,6 +61,11 @@ http.route({ path: "/run/referrals:getTeamMembers", method: "OPTIONS", handler: 
 http.route({ path: "/run/referrals:getReferralEarningsHistory", method: "OPTIONS", handler: httpAction(async () => corsResponse()) });
 http.route({ path: "/run/referrals:getLeaderboard", method: "OPTIONS", handler: httpAction(async () => corsResponse()) });
 http.route({ path: "/run/networks:getAllNetworks", method: "OPTIONS", handler: httpAction(async () => corsResponse()) });
+http.route({ path: "/run/admin:getPendingWithdrawals", method: "OPTIONS", handler: httpAction(async () => corsResponse()) });
+http.route({ path: "/run/messages:list", method: "OPTIONS", handler: httpAction(async () => corsResponse()) });
+http.route({ path: "/run/messages:unreadCount", method: "OPTIONS", handler: httpAction(async () => corsResponse()) });
+http.route({ path: "/mutation/messages:markRead", method: "OPTIONS", handler: httpAction(async () => corsResponse()) });
+http.route({ path: "/mutation/messages:markAllRead", method: "OPTIONS", handler: httpAction(async () => corsResponse()) });
 
 // --- Auth Routes ---
 
@@ -467,6 +472,19 @@ http.route({
   }),
 });
 
+http.route({
+  path: "/run/admin:getPendingWithdrawals",
+  method: "GET",
+  handler: httpAction(async (ctx) => {
+    try {
+      const result = await ctx.runQuery(api.admin.getPendingWithdrawals);
+      return jsonResponse(result);
+    } catch (e: any) {
+      return jsonResponse(e.message, 400);
+    }
+  }),
+});
+
 // --- Referral Routes ---
 
 http.route({
@@ -540,6 +558,66 @@ http.route({
     if (!userId) return jsonResponse("Missing userId", 400);
     const result = await ctx.runQuery(api.teams.getTeamStats, { userId: userId as any, period: period as any });
     return jsonResponse(result);
+  }),
+});
+
+http.route({
+  path: "/run/messages:list",
+  method: "GET",
+  handler: httpAction(async (ctx, request) => {
+    try {
+      const { searchParams } = new URL(request.url);
+      const userId = searchParams.get("userId");
+      if (!userId) return jsonResponse("Missing userId", 400);
+      const result = await ctx.runQuery(api.messages.list, { userId: userId as any });
+      return jsonResponse(result);
+    } catch (e: any) {
+      return jsonResponse(e.message, 400);
+    }
+  }),
+});
+
+http.route({
+  path: "/run/messages:unreadCount",
+  method: "GET",
+  handler: httpAction(async (ctx, request) => {
+    try {
+      const { searchParams } = new URL(request.url);
+      const userId = searchParams.get("userId");
+      if (!userId) return jsonResponse("Missing userId", 400);
+      const result = await ctx.runQuery(api.messages.unreadCount, { userId: userId as any });
+      return jsonResponse(result);
+    } catch (e: any) {
+      return jsonResponse(e.message, 400);
+    }
+  }),
+});
+
+http.route({
+  path: "/mutation/messages:markRead",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const body = await request.json();
+    try {
+      await ctx.runMutation(api.messages.markRead, { messageId: body.messageId });
+      return jsonResponse({ success: true });
+    } catch (e: any) {
+      return jsonResponse(e.message, 400);
+    }
+  }),
+});
+
+http.route({
+  path: "/mutation/messages:markAllRead",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const body = await request.json();
+    try {
+      await ctx.runMutation(api.messages.markAllRead, { userId: body.userId });
+      return jsonResponse({ success: true });
+    } catch (e: any) {
+      return jsonResponse(e.message, 400);
+    }
   }),
 });
 
