@@ -1,8 +1,11 @@
 import { ethers } from "ethers";
 import * as crypto from "crypto";
 
-// Ensure these are in your .env file
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || "0123456789abcdef0123456789abcdef"; // 32 bytes
+const ENCRYPTION_KEY = (() => {
+  const key = process.env.ENCRYPTION_KEY;
+  if (!key) throw new Error("ENCRYPTION_KEY must be set in environment variables (32 hex chars)");
+  return key;
+})();
 const IV_LENGTH = 16;
 
 /**
