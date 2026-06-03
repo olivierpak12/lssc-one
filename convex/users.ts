@@ -144,7 +144,7 @@ export const register = mutation({
       invitationCode: args.invitationCode ?? "",
       myInviteCode: myInviteCode,
       referralCode: myReferralCode,
-      referralLink: `https://myapp.com/register?ref=${myReferralCode}`,
+      referralLink: `https://lsscone.com/#/register?ref=${myReferralCode}`,
       referredBy: referredBy,
       referralBalance: 0,
       totalReferralEarnings: 0,

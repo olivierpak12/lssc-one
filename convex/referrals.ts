@@ -34,7 +34,7 @@ export const createReferralCode = mutation({
         .unique();
     }
 
-    const referralLink = `https://myapp.com/register?ref=${code}`;
+    const referralLink = `https://lsscone.com/#/register?ref=${code}`;
     await ctx.db.patch(args.userId, { 
       referralCode: code,
       referralLink: referralLink
@@ -215,7 +215,7 @@ export const distributeCommissions = mutation({
         
         const level2Parent = await ctx.db.get(level1Parent.referredBy);
         if (level2Parent?.referredBy) {
-            await processCommission(ctx, level2Parent.referredBy, user._id, 3, 2, depositAmount, args.depositId);
+            await processCommission(ctx, level2Parent.referredBy, user._id, 3, 1, depositAmount, args.depositId);
         }
     }
   }
