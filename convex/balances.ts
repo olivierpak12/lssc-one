@@ -40,9 +40,7 @@ export const getWithdrawableBalance = query({
 
     const claimedAmount = earningsBalance ? BigInt(earningsBalance.amount) : 0n;
     const referralMicros = BigInt(Math.round((user.referralBalance ?? 0) * 1000000));
-    const teamRewards = BigInt(user.teamRewardsBalance ?? "0");
-
-    const total = claimedAmount + referralMicros + teamRewards;
+    const total = claimedAmount + referralMicros;
     return total.toString();
   },
 });

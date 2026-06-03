@@ -2,31 +2,27 @@ import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
 const BIKE_CATALOG: Record<string, { name: string; price: number; dailyIncome: number }> = {
-  beginner: { name: "Beginner period", price: 17.0, dailyIncome: 1.9 },
-  blue_s1: { name: "BLUE-S1", price: 57.0, dailyIncome: 6.3 },
-  blue_s2: { name: "BLUE-S2", price: 277.0, dailyIncome: 31.0 },
-  blue_s3: { name: "BLUE-S3", price: 677.0, dailyIncome: 80.0 },
-  blue_s4: { name: "BLUE-S4", price: 1166.0, dailyIncome: 138.0 },
-  blue_s5: { name: "BLUE-S5", price: 2266.0, dailyIncome: 268.0 },
-  blue_s6: { name: "BLUE-S6", price: 4466.0, dailyIncome: 548.0 },
-  blue_s7: { name: "BLUE-S7", price: 7766.0, dailyIncome: 955.0 },
-  blue_s8: { name: "BLUE-S8", price: 16888.0, dailyIncome: 2046.0 },
-  blue_s9: { name: "BLUE-S9", price: 22888.0, dailyIncome: 2858.0 },
-  blue_s10: { name: "BLUE-S10", price: 36888.0, dailyIncome: 4606.0 },
+  a1: { name: "A1", price: 20.0, dailyIncome: 2.0 },
+  a2: { name: "A2", price: 100.0, dailyIncome: 6.6 },
+  a3: { name: "A3", price: 380.0, dailyIncome: 25.0 },
+  b1: { name: "B1", price: 780.0, dailyIncome: 52.0 },
+  b2: { name: "B2", price: 1800.0, dailyIncome: 120.0 },
+  b3: { name: "B3", price: 4800.0, dailyIncome: 320.0 },
+  s1: { name: "S1", price: 12800.0, dailyIncome: 853.0 },
+  s2: { name: "S2", price: 25800.0, dailyIncome: 1720.0 },
+  s3: { name: "S3", price: 58000.0, dailyIncome: 3850.0 },
 };
 
 const BIKE_ORDER = [
-  "beginner",
-  "blue_s1",
-  "blue_s2",
-  "blue_s3",
-  "blue_s4",
-  "blue_s5",
-  "blue_s6",
-  "blue_s7",
-  "blue_s8",
-  "blue_s9",
-  "blue_s10",
+  "a1",
+  "a2",
+  "a3",
+  "b1",
+  "b2",
+  "b3",
+  "s1",
+  "s2",
+  "s3",
 ];
 
 const UPGRADE_CLOSE_FEE_PERCENT = 2.0;
@@ -50,14 +46,30 @@ export const buyBike = mutation({
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
       .collect();
 
+    // Enforce: User can only own ONE package at a time
+    if (purchases.length > 1) {
+      // Clean up any duplicate purchases (keep the latest)
+      const sortedByDate = purchases.sort((a, b) => b.purchasedAt - a.purchasedAt);
+      for (let i = 1; i < sortedByDate.length; i++) {
+        await ctx.db.delete(sortedByDate[i]._id);
+      }
+    }
+
     const totalBalance = balances.reduce((acc, curr) => acc + BigInt(curr.amount), 0n);
 
     let refundAmount = 0n;
-    let highestOwnedIndex = -1;
-    for (const purchase of purchases) {
-      const index = BIKE_ORDER.indexOf(purchase.bikeId);
-      if (index >= 0 && index > highestOwnedIndex) {
-        highestOwnedIndex = index;
+    let currentPurchase = null;
+    let currentPackageIndex = -1;
+
+    if (purchases.length > 0) {
+      const sortedByDate = purchases.sort((a, b) => b.purchasedAt - a.purchasedAt);
+      currentPurchase = sortedByDate[0];
+      currentPackageIndex = BIKE_ORDER.indexOf(currentPurchase.bikeId);
+
+      if (purchases.length > 1) {
+        for (let i = 1; i < sortedByDate.length; i++) {
+          await ctx.db.delete(sortedByDate[i]._id);
+        }
       }
     }
 
@@ -66,47 +78,43 @@ export const buyBike = mutation({
       throw new Error("Invalid package selected.");
     }
 
-    if (args.bikeId === "beginner") {
-      if (highestOwnedIndex >= 0) {
-        throw new Error("You already own a package; purchase the next upgrade instead.");
+    const highestAffordablePackageId = Object.entries(BIKE_CATALOG)
+      .filter(([, bike]) => totalBalance >= BigInt(Math.round(bike.price * 1000000)))
+      .sort((a, b) => BIKE_ORDER.indexOf(b[0]) - BIKE_ORDER.indexOf(a[0]))
+      .map(([bikeId]) => bikeId)[0] || null;
+
+    // First purchase - allow the highest affordable package only
+    if (currentPurchase === null) {
+      if (highestAffordablePackageId === null) {
+        throw new Error("Insufficient balance to buy any package.");
       }
-    } else if (highestOwnedIndex < 0) {
-      let highestAffordableIndex = -1;
-      for (let i = 0; i < BIKE_ORDER.length; i++) {
-        const bike = BIKE_CATALOG[BIKE_ORDER[i]];
-        if (!bike) continue;
-        const bikePriceMicros = BigInt(Math.round(bike.price * 1000000));
-        if (totalBalance >= bikePriceMicros) {
-          highestAffordableIndex = i;
-        }
-      }
-      if (highestAffordableIndex < 0) {
-        throw new Error("Insufficient balance");
-      }
-      if (targetIndex !== highestAffordableIndex) {
-        throw new Error("Only the highest affordable package can be purchased first.");
+      if (args.bikeId !== highestAffordablePackageId) {
+        throw new Error(
+          `First purchase must be ${highestAffordablePackageId.toUpperCase()} based on your deposit amount.`,
+        );
       }
     } else {
-      if (targetIndex !== highestOwnedIndex + 1) {
-        throw new Error("You must purchase packages in order.");
+      // Upgrading - must be to next package in sequence
+      if (targetIndex !== currentPackageIndex + 1) {
+        throw new Error("You must upgrade to the next package in sequence.");
       }
 
-      const refundBikeId = BIKE_ORDER[highestOwnedIndex];
-      const refundBike = BIKE_CATALOG[refundBikeId];
-      if (refundBike) {
+      // Calculate refund (98% of current package price)
+      const currentBike = BIKE_CATALOG[currentPurchase.bikeId];
+      if (currentBike) {
         const feeMultiplier = 1 - UPGRADE_CLOSE_FEE_PERCENT / 100;
-        refundAmount = BigInt(Math.round(refundBike.price * feeMultiplier * 1000000));
+        refundAmount = BigInt(Math.round(currentBike.price * feeMultiplier * 1000000));
       }
     }
 
     const effectiveBalance = totalBalance + refundAmount;
-    if (effectiveBalance < amountMicro) {
+    const bikePriceMicros = BigInt(Math.round(BIKE_CATALOG[args.bikeId]?.price || 0 * 1000000));
+    if (effectiveBalance < bikePriceMicros) {
       throw new Error("Insufficient balance");
     }
 
-    let lastClaimedAt: number | undefined;
-
-    if (refundAmount > 0n) {
+    // Apply refund if upgrading
+    if (refundAmount > 0n && currentPurchase) {
       if (balances.length > 0) {
         const balance = balances[0];
         const currentAmount = BigInt(balance.amount);
@@ -122,45 +130,71 @@ export const buyBike = mutation({
         });
       }
 
-      const refundBikeId = BIKE_ORDER[highestOwnedIndex];
-      const refundPurchase = purchases.find((p) => p.bikeId === refundBikeId);
-      if (refundPurchase) {
-        lastClaimedAt = refundPurchase.lastClaimedAt;
-        await ctx.db.delete(refundPurchase._id);
-      }
-    }
+      // Delete the old purchase and preserve lastClaimedAt
+      const lastClaimedAt = currentPurchase.lastClaimedAt;
+      await ctx.db.delete(currentPurchase._id);
 
-    let remaining = amountMicro;
-    const updatedBalances = await ctx.db
-      .query("balances")
-      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-      .collect();
+      // Deduct new package price from balance
+      let remaining = bikePriceMicros;
+      const updatedBalances = await ctx.db
+        .query("balances")
+        .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+        .collect();
 
-    for (const balance of updatedBalances) {
-      if (remaining <= 0n) break;
-      const currentAmount = BigInt(balance.amount);
-      if (currentAmount > 0n) {
-        const toDeduct = remaining < currentAmount ? remaining : currentAmount;
-        const newAmount = (currentAmount - toDeduct).toString();
-        await ctx.db.patch(balance._id, { amount: newAmount, updatedAt: Date.now() });
-        remaining -= toDeduct;
+      for (const balance of updatedBalances) {
+        if (remaining <= 0n) break;
+        const currentAmount = BigInt(balance.amount);
+        if (currentAmount > 0n) {
+          const toDeduct = remaining < currentAmount ? remaining : currentAmount;
+          const newAmount = (currentAmount - toDeduct).toString();
+          await ctx.db.patch(balance._id, { amount: newAmount, updatedAt: Date.now() });
+          remaining -= toDeduct;
+        }
       }
-    }
 
-    const bike = BIKE_CATALOG[args.bikeId];
-    if (bike) {
-      const newPurchase: any = {
-        userId: args.userId,
-        bikeId: args.bikeId,
-        bikeName: bike.name,
-        equipmentPrice: bike.price,
-        dailyIncome: bike.dailyIncome,
-        purchasedAt: Date.now(),
-      };
-      if (lastClaimedAt !== undefined) {
-        newPurchase.lastClaimedAt = lastClaimedAt;
+      // Create new purchase with preserved lastClaimedAt
+      const bike = BIKE_CATALOG[args.bikeId];
+      if (bike) {
+        await ctx.db.insert("purchases", {
+          userId: args.userId,
+          bikeId: args.bikeId,
+          bikeName: bike.name,
+          equipmentPrice: bike.price,
+          dailyIncome: bike.dailyIncome,
+          purchasedAt: Date.now(),
+          lastClaimedAt: lastClaimedAt,
+        });
       }
-      await ctx.db.insert("purchases", newPurchase);
+    } else {
+      // First purchase
+      let remaining = bikePriceMicros;
+      const updatedBalances = await ctx.db
+        .query("balances")
+        .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+        .collect();
+
+      for (const balance of updatedBalances) {
+        if (remaining <= 0n) break;
+        const currentAmount = BigInt(balance.amount);
+        if (currentAmount > 0n) {
+          const toDeduct = remaining < currentAmount ? remaining : currentAmount;
+          const newAmount = (currentAmount - toDeduct).toString();
+          await ctx.db.patch(balance._id, { amount: newAmount, updatedAt: Date.now() });
+          remaining -= toDeduct;
+        }
+      }
+
+      const bike = BIKE_CATALOG[args.bikeId];
+      if (bike) {
+        await ctx.db.insert("purchases", {
+          userId: args.userId,
+          bikeId: args.bikeId,
+          bikeName: bike.name,
+          equipmentPrice: bike.price,
+          dailyIncome: bike.dailyIncome,
+          purchasedAt: Date.now(),
+        });
+      }
     }
 
     return { success: true };

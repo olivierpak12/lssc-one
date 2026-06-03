@@ -1198,17 +1198,15 @@ class LsscScreen extends ConsumerStatefulWidget {
 
 class _LsscScreenState extends ConsumerState<LsscScreen> {
   static const _bikeOrder = [
-    'beginner',
-    'blue_s1',
-    'blue_s2',
-    'blue_s3',
-    'blue_s4',
-    'blue_s5',
-    'blue_s6',
-    'blue_s7',
-    'blue_s8',
-    'blue_s9',
-    'blue_s10',
+    'a1',
+    'a2',
+    'a3',
+    'b1',
+    'b2',
+    'b3',
+    's1',
+    's2',
+    's3',
   ];
 
   late List<LsscModel> bikes;
@@ -1218,91 +1216,75 @@ class _LsscScreenState extends ConsumerState<LsscScreen> {
     super.initState();
     bikes = [
       LsscModel(
-        id: 'beginner',
-        name: 'Beginner period',
+        id: 'a1',
+        name: 'A1',
         icon: '⚡',
-        equipmentPrice: 17.00,
-        dailyIncome: 1.90,
+        equipmentPrice: 20.00,
+        dailyIncome: 2.00,
         imageUrl: 'asset/lssc.png',
       ),
       LsscModel(
-        id: 'blue_s1',
-        name: 'LSSC-S1',
+        id: 'a2',
+        name: 'A2',
         icon: '⚡',
-        equipmentPrice: 57.00,
-        dailyIncome: 6.30,
+        equipmentPrice: 100.00,
+        dailyIncome: 6.60,
         imageUrl: 'asset/lssc.png',
       ),
       LsscModel(
-        id: 'blue_s2',
-        name: 'LSSC-S2',
+        id: 'a3',
+        name: 'A3',
         icon: '⚡',
-        equipmentPrice: 277.00,
-        dailyIncome: 31.00,
+        equipmentPrice: 380.00,
+        dailyIncome: 25.00,
         imageUrl: 'asset/lssc.png',
       ),
       LsscModel(
-        id: 'blue_s3',
-        name: 'LSSC-S3',
+        id: 'b1',
+        name: 'B1',
         icon: '⚡',
-        equipmentPrice: 677.00,
-        dailyIncome: 80.00,
+        equipmentPrice: 780.00,
+        dailyIncome: 52.00,
         imageUrl: 'asset/lssc.png',
       ),
       LsscModel(
-        id: 'blue_s4',
-        name: 'LSSC-S4',
+        id: 'b2',
+        name: 'B2',
         icon: '⚡',
-        equipmentPrice: 1166.00,
-        dailyIncome: 138.00,
+        equipmentPrice: 1800.00,
+        dailyIncome: 120.00,
         imageUrl: 'asset/lssc.png',
       ),
       LsscModel(
-        id: 'blue_s5',
-        name: 'LSSC-S5',
+        id: 'b3',
+        name: 'B3',
         icon: '⚡',
-        equipmentPrice: 2266.00,
-        dailyIncome: 268.00,
+        equipmentPrice: 4800.00,
+        dailyIncome: 320.00,
         imageUrl: 'asset/lssc.png',
       ),
       LsscModel(
-        id: 'blue_s6',
-        name: 'LSSC-S6',
+        id: 's1',
+        name: 'S1',
         icon: '⚡',
-        equipmentPrice: 4466.00,
-        dailyIncome: 548.00,
+        equipmentPrice: 12800.00,
+        dailyIncome: 853.00,
         imageUrl: 'asset/lssc.png',
       ),
       LsscModel(
-        id: 'blue_s7',
-        name: 'LSSC-S7',
+        id: 's2',
+        name: 'S2',
         icon: '⚡',
-        equipmentPrice: 7766.00,
-        dailyIncome: 955.00,
+        equipmentPrice: 25800.00,
+        dailyIncome: 1720.00,
         imageUrl: 'asset/lssc.png',
       ),
       LsscModel(
-        id: 'blue_s8',
-        name: 'LSSC-S8',
+        id: 's3',
+        name: 'S3',
         icon: '⚡',
-        equipmentPrice: 16888.00,
-        dailyIncome: 2046.00,
-        imageUrl: 'asset/lssc.png',
-      ),
-      LsscModel(
-        id: 'blue_s9',
-        name: 'LSSC-S9',
-        icon: '⚡',
-        equipmentPrice: 22888.00,
-        dailyIncome: 2858.00,
-        imageUrl: 'asset/lssc.png',
-      ),
-      LsscModel(
-        id: 'blue_s10',
-        name: 'LSSC-S10',
-        icon: '⚡',
-        equipmentPrice: 36888.00,
-        dailyIncome: 4606.00,
+        equipmentPrice: 58000.00,
+        dailyIncome: 3850.00,
         imageUrl: 'asset/lssc.png',
       ),
     ];
@@ -1320,7 +1302,7 @@ class _LsscScreenState extends ConsumerState<LsscScreen> {
           child: Column(
             children: [
               Text(
-                'LSSC SHOP',
+                'lssc global',
                 style: GoogleFonts.poppins(
                   fontWeight: FontWeight.w700,
                   fontSize: 24,
@@ -1380,11 +1362,15 @@ class _LsscScreenState extends ConsumerState<LsscScreen> {
               for (final bike in bikes) {
                 if (!ownedBikeIds.contains(bike.id)) {
                   final bikePriceMicros = BigInt.from((bike.equipmentPrice * 1000000).round());
-                  if (userBalance >= bikePriceMicros && bikePriceMicros > maxAffordablePrice) {
+                  if (effectiveBalance >= bikePriceMicros && bikePriceMicros > maxAffordablePrice) {
                     maxAffordablePrice = bikePriceMicros;
                   }
                 }
               }
+
+              final highestAffordableBike = maxAffordablePrice > BigInt.from(-1)
+                  ? bikes.firstWhere((bike) => BigInt.from((bike.equipmentPrice * 1000000).round()) == maxAffordablePrice)
+                  : null;
 
               String nextPackageMessage;
               if (nextBikeIndex < bikes.length) {
@@ -1461,36 +1447,38 @@ class _LsscScreenState extends ConsumerState<LsscScreen> {
                             itemBuilder: (context, index) {
                             final bike = bikes[index];
                             final isOwned = ownedBikeIds.contains(bike.id);
-                            final isSkipped = highestOwnedIndex > index && !isOwned;
+                            final isLowerPackage = highestOwnedIndex > index && !isOwned;
                             final bikePriceMicros = BigInt.from((bike.equipmentPrice * 1000000).round());
                             final isNextPackage = index == nextBikeIndex;
-                            final isHighestAffordableWhenNoneOwned = !hasOwnedPackages &&
-                                bikePriceMicros == maxAffordablePrice;
 
-                            final canBuy = !isOwned && !isSkipped && (
-                              (hasOwnedPackages && isNextPackage && effectiveBalance >= bikePriceMicros) ||
-                              (!hasOwnedPackages && isHighestAffordableWhenNoneOwned)
+                            final canBuy = !isOwned && !isLowerPackage && (
+                              hasOwnedPackages
+                                  ? (isNextPackage && effectiveBalance >= bikePriceMicros)
+                                  : (bikePriceMicros == maxAffordablePrice)
                             );
 
                             String? disabledReason;
                             if (isOwned) {
                               disabledReason = null;
-                            } else if (isSkipped) {
-                              disabledReason = 'Skipped by buying a higher package';
+                            } else if (isLowerPackage) {
+                              disabledReason = 'Only upgrade available';
                             } else if (hasOwnedPackages) {
                               if (isNextPackage) {
                                 disabledReason = effectiveBalance >= bikePriceMicros
                                     ? null
                                     : 'Deposit more or close the current package to upgrade';
                               } else {
-                                disabledReason = 'Purchase your next upgrade first';
+                                disabledReason = 'Only upgrade available';
                               }
-                            } else if (maxAffordablePrice > BigInt.from(-1)) {
-                              disabledReason = isHighestAffordableWhenNoneOwned
-                                  ? null
-                                  : 'Only the highest affordable package is available';
                             } else {
-                              disabledReason = 'Insufficient balance';
+                              if (bikePriceMicros == maxAffordablePrice) {
+                                disabledReason = null;
+                              } else if (maxAffordablePrice > BigInt.from(-1) && bikePriceMicros < maxAffordablePrice) {
+                                disabledReason =
+                                    'Your deposit qualifies for ${highestAffordableBike?.name ?? 'a higher package'} only';
+                              } else {
+                                disabledReason = 'Insufficient balance';
+                              }
                             }
 
                             return LsscCard(
@@ -5163,7 +5151,7 @@ class _WithdrawScreenState extends ConsumerState<WithdrawScreen> {
               const SizedBox(width: 8),
               Flexible(
                 child: Text(
-                  'Available \$${isLoading ? '...' : displayBalance.toStringAsFixed(2)} $selectedToken',
+                  'Available earnings + referrals: \$${isLoading ? '...' : displayBalance.toStringAsFixed(2)} $selectedToken',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold),

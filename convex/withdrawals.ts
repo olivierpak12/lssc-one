@@ -46,16 +46,15 @@ export const requestWithdrawal = mutation({
 
     const claimedMicros = earningsBalance ? BigInt(earningsBalance.amount) : 0n;
     const referralMicros = BigInt(Math.round((user.referralBalance ?? 0) * 1000000));
-    const teamRewards = BigInt(user.teamRewardsBalance ?? "0");
-    const availableBalance = claimedMicros + referralMicros + teamRewards;
+    const availableBalance = claimedMicros + referralMicros;
 
     if (availableBalance < totalToDeduct) {
-      throw new Error(`Insufficient withdrawable balance. You only have \$${(Number(availableBalance) / 1000000).toFixed(2)} available.`);
+      throw new Error(`Insufficient available earnings/referral balance. You only have \$${(Number(availableBalance) / 1000000).toFixed(2)} available.`);
     }
 
     let remainingToDeduct = totalToDeduct;
 
-    // Deduct from chainId=0 (claimed earnings) first
+    // Deduct from claimed earnings first
     if (earningsBalance && remainingToDeduct > 0n) {
       const amountOnChain0 = BigInt(earningsBalance.amount);
       const toDeduct = amountOnChain0 > remainingToDeduct ? remainingToDeduct : amountOnChain0;
@@ -66,7 +65,7 @@ export const requestWithdrawal = mutation({
       remainingToDeduct -= toDeduct;
     }
 
-    // Deduct from referralBalance if needed
+    // Deduct from referral balance if needed
     if (remainingToDeduct > 0n) {
       const referralMicrosLeft = BigInt(Math.round((user.referralBalance ?? 0) * 1000000));
       const referralToDeduct = referralMicrosLeft > remainingToDeduct ? remainingToDeduct : referralMicrosLeft;
@@ -77,14 +76,8 @@ export const requestWithdrawal = mutation({
       remainingToDeduct -= referralToDeduct;
     }
 
-    // Deduct from teamRewardsBalance if needed
     if (remainingToDeduct > 0n) {
-      const teamRewardsLeft = BigInt(user.teamRewardsBalance ?? "0");
-      const teamToDeduct = teamRewardsLeft > remainingToDeduct ? remainingToDeduct : teamRewardsLeft;
-      const newTeamRewards = (teamRewardsLeft - teamToDeduct).toString();
-      await ctx.db.patch(args.userId, {
-        teamRewardsBalance: newTeamRewards,
-      });
+      throw new Error(`Insufficient available earnings/referral balance. You only have \$${(Number(availableBalance) / 1000000).toFixed(2)} available.`);
     }
 
     const withdrawalId = await ctx.db.insert("withdrawals", {

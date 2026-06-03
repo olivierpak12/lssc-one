@@ -1,70 +1,58 @@
 {
   "bikes": [
     {
-      "id": "beginner",
-      "name": "Beginner period",
-      "equipmentPrice": 17.00,
-      "dailyIncome": 1.90
+      "id": "a1",
+      "name": "A1",
+      "equipmentPrice": 20.00,
+      "dailyIncome": 2.00
     },
     {
-      "id": "blue_s1",
-      "name": "BLUE-S1",
-      "equipmentPrice": 57.00,
-      "dailyIncome": 6.30
+      "id": "a2",
+      "name": "A2",
+      "equipmentPrice": 100.00,
+      "dailyIncome": 6.60
     },
     {
-      "id": "blue_s2",
-      "name": "BLUE-S2",
-      "equipmentPrice": 277.00,
-      "dailyIncome": 31.00
+      "id": "a3",
+      "name": "A3",
+      "equipmentPrice": 380.00,
+      "dailyIncome": 25.00
     },
     {
-      "id": "blue_s3",
-      "name": "BLUE-S3",
-      "equipmentPrice": 677.00,
-      "dailyIncome": 80.00
+      "id": "b1",
+      "name": "B1",
+      "equipmentPrice": 780.00,
+      "dailyIncome": 52.00
     },
     {
-      "id": "blue_s4",
-      "name": "BLUE-S4",
-      "equipmentPrice": 1166.00,
-      "dailyIncome": 138.00
+      "id": "b2",
+      "name": "B2",
+      "equipmentPrice": 1800.00,
+      "dailyIncome": 120.00
     },
     {
-      "id": "blue_s5",
-      "name": "BLUE-S5",
-      "equipmentPrice": 2266.00,
-      "dailyIncome": 268.00
+      "id": "b3",
+      "name": "B3",
+      "equipmentPrice": 4800.00,
+      "dailyIncome": 320.00
     },
     {
-      "id": "blue_s6",
-      "name": "BLUE-S6",
-      "equipmentPrice": 4466.00,
-      "dailyIncome": 548.00
+      "id": "s1",
+      "name": "S1",
+      "equipmentPrice": 12800.00,
+      "dailyIncome": 853.00
     },
     {
-      "id": "blue_s7",
-      "name": "BLUE-S7",
-      "equipmentPrice": 7766.00,
-      "dailyIncome": 955.00
+      "id": "s2",
+      "name": "S2",
+      "equipmentPrice": 25800.00,
+      "dailyIncome": 1720.00
     },
     {
-      "id": "blue_s8",
-      "name": "BLUE-S8",
-      "equipmentPrice": 16888.00,
-      "dailyIncome": 2046.00
-    },
-    {
-      "id": "blue_s9",
-      "name": "BLUE-S9",
-      "equipmentPrice": 22888.00,
-      "dailyIncome": 2858.00
-    },
-    {
-      "id": "blue_s10",
-      "name": "BLUE-S10",
-      "equipmentPrice": 36888.00,
-      "dailyIncome": 4606.00
+      "id": "s3",
+      "name": "S3",
+      "equipmentPrice": 58000.00,
+      "dailyIncome": 3850.00
     }
   ]
 }
