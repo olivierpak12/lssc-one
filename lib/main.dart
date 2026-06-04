@@ -2500,15 +2500,12 @@ class _TeamScreenState extends ConsumerState<TeamScreen> {
     final totalMembers = (teamA['count'] as int? ?? 0) + (teamB['count'] as int? ?? 0) + (teamC['count'] as int? ?? 0);
     final newMembersToday = data['newMembersToday'] as int? ?? 0;
     
-    // Calculate total recharge amounts
-    BigInt totalRecharge = BigInt.zero;
-    for (final team in [teamA, teamB, teamC]) {
-      final rechargeStr = team['rechargeAmount'] as String? ?? '0';
-      try {
-        totalRecharge += BigInt.parse(rechargeStr);
-      } catch (_) {}
-    }
-    final rechargeDisplay = (totalRecharge / BigInt.from(1000000)).toStringAsFixed(2);
+    final summary = data['summary'] as Map<String, dynamic>? ?? {};
+    final totalDepositStr = summary['totalDeposit'] as String? ?? '0';
+    final totalDeposit = BigInt.tryParse(totalDepositStr) ?? BigInt.zero;
+    final rechargeDisplay = totalDeposit > BigInt.zero
+        ? (totalDeposit / BigInt.from(1000000)).toStringAsFixed(2)
+        : '0.00';
 
     return Container(
       width: double.infinity,
