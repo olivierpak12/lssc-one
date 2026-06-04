@@ -2241,48 +2241,49 @@ class _TeamScreenState extends ConsumerState<TeamScreen> {
         actions: const [NotificationBell()],
       ),
       body: statsAsync.when(
-        data: (data) {
-          final teamA = data['teamA'] as Map<String, dynamic>? ?? {};
-          final teamB = data['teamB'] as Map<String, dynamic>? ?? {};
-          final teamC = data['teamC'] as Map<String, dynamic>? ?? {};
-
-          final aCount = teamA['count'] as int? ?? 0;
-          final bCount = teamB['count'] as int? ?? 0;
-          final cCount = teamC['count'] as int? ?? 0;
-
-          final aIncome = teamA['benefitsPct'] as int? ?? 0;
-          final bIncome = teamB['benefitsPct'] as int? ?? 0;
-          final cIncome = teamC['benefitsPct'] as int? ?? 0;
-
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildPeriodSelector(),
-                const SizedBox(height: 24),
-                // Premium team benefit cards
-                Row(
-                  children: [
-                    Expanded(child: _buildTeamCard(title: 'Team A', count: '$aCount', percent: '$aIncome%', color: AppColors.success, gradientColors: [const Color(0xFF1B5E20).withValues(alpha: 0.3), Colors.transparent])),
-                    const SizedBox(width: 12),
-                    Expanded(child: _buildTeamCard(title: 'Team B', count: '$bCount', percent: '$bIncome%', color: AppColors.accentBlue, gradientColors: [AppColors.overlayBlue, Colors.transparent])),
-                    const SizedBox(width: 12),
-                    Expanded(child: _buildTeamCard(title: 'Team C', count: '$cCount', percent: '$cIncome%', color: AppColors.accentPurple, gradientColors: [AppColors.overlayPurpleSoft, Colors.transparent])),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                _buildGainsCard(data),
-                const SizedBox(height: 24),
-                _buildInviteCard(),
-                const SizedBox(height: 24),
-                _buildRecentCommissions(),
-              ],
-            ),
-          );
-        },
+        data: (data) => _buildTeamContent(data),
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Error loading team data')),
+        error: (e, _) => _buildTeamContent({}),
+      ),
+    );
+  }
+
+  Widget _buildTeamContent(Map<String, dynamic> data) {
+    final teamA = data['teamA'] as Map<String, dynamic>? ?? {};
+    final teamB = data['teamB'] as Map<String, dynamic>? ?? {};
+    final teamC = data['teamC'] as Map<String, dynamic>? ?? {};
+
+    final aCount = teamA['count'] as int? ?? 0;
+    final bCount = teamB['count'] as int? ?? 0;
+    final cCount = teamC['count'] as int? ?? 0;
+
+    final aIncome = teamA['benefitsPct'] as int? ?? 0;
+    final bIncome = teamB['benefitsPct'] as int? ?? 0;
+    final cIncome = teamC['benefitsPct'] as int? ?? 0;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildPeriodSelector(),
+          const SizedBox(height: 24),
+          Row(
+            children: [
+              Expanded(child: _buildTeamCard(title: 'Team A', count: '$aCount', percent: '$aIncome%', color: AppColors.success, gradientColors: [const Color(0xFF1B5E20).withValues(alpha: 0.3), Colors.transparent])),
+              const SizedBox(width: 12),
+              Expanded(child: _buildTeamCard(title: 'Team B', count: '$bCount', percent: '$bIncome%', color: AppColors.accentBlue, gradientColors: [AppColors.overlayBlue, Colors.transparent])),
+              const SizedBox(width: 12),
+              Expanded(child: _buildTeamCard(title: 'Team C', count: '$cCount', percent: '$cIncome%', color: AppColors.accentPurple, gradientColors: [AppColors.overlayPurpleSoft, Colors.transparent])),
+            ],
+          ),
+          const SizedBox(height: 24),
+          _buildGainsCard(data),
+          const SizedBox(height: 24),
+          _buildInviteCard(),
+          const SizedBox(height: 24),
+          _buildRecentCommissions(),
+        ],
       ),
     );
   }
@@ -2809,9 +2810,9 @@ class _TeamScreenState extends ConsumerState<TeamScreen> {
       children: [
         _buildPeriodTab('today', 'Today'),
         const SizedBox(width: 8),
-        _buildPeriodTab('last7days', 'Week'),
-        const SizedBox(width: 8),
         _buildPeriodTab('thismonth', 'Month'),
+        const SizedBox(width: 8),
+        _buildPeriodTab('thisyear', 'Year'),
       ],
     );
   }
