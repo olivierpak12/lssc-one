@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../theme/app_colors.dart';
 import '../theme/app_animations.dart';
 
 const String _supportUrl = 'https://t.me/Lssc1support';
@@ -18,6 +17,9 @@ class _SupportChatButtonState extends State<SupportChatButton>
   late AnimationController _pressController;
   late Animation<double> _pulseAnim;
   late Animation<double> _pressAnim;
+
+  Offset _position = Offset.zero;
+  bool _initialized = false;
 
   @override
   void initState() {
@@ -55,40 +57,62 @@ class _SupportChatButtonState extends State<SupportChatButton>
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: Listenable.merge([_pulseAnim, _pressAnim]),
-      builder: (context, _) {
-        final scale = _pressAnim.value * (_pulseAnim.value - 1.0) + 1.0;
-        return Transform.scale(
-          scale: scale,
-          child: GestureDetector(
-            onTap: _openSupport,
-            onTapDown: (_) => _pressController.forward(),
-            onTapUp: (_) => _pressController.reverse(),
-            onTapCancel: () => _pressController.reverse(),
-            child: Container(
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: AppGradients.primary,
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.primary.withValues(alpha: 0.4),
-                    blurRadius: 16,
-                    spreadRadius: 1,
+    if (!_initialized) {
+      final size = MediaQuery.of(context).size;
+      final bottomPadding = MediaQuery.of(context).padding.bottom;
+      _position = Offset(
+        size.width - 56 - 24,
+        size.height - 56 - 24 - bottomPadding,
+      );
+      _initialized = true;
+    }
+
+    return Positioned(
+      left: _position.dx,
+      top: _position.dy,
+      child: AnimatedBuilder(
+        animation: Listenable.merge([_pulseAnim, _pressAnim]),
+        builder: (context, _) {
+          final scale = _pressAnim.value * (_pulseAnim.value - 1.0) + 1.0;
+          return Transform.scale(
+            scale: scale,
+            child: GestureDetector(
+              onTap: _openSupport,
+              onTapDown: (_) => _pressController.forward(),
+              onTapUp: (_) => _pressController.reverse(),
+              onTapCancel: () => _pressController.reverse(),
+              onPanUpdate: (details) {
+                setState(() {
+                  _position += details.delta;
+                });
+              },
+              child: Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.15),
+                      blurRadius: 16,
+                      spreadRadius: 1,
+                    ),
+                  ],
+                ),
+                child: ClipOval(
+                  child: Image.asset(
+                    'asset/bgLogo.png',
+                    width: 56,
+                    height: 56,
+                    fit: BoxFit.fill,
                   ),
-                ],
-              ),
-              child: const Icon(
-                Icons.support_agent_rounded,
-                color: Colors.black,
-                size: 28,
+                ),
               ),
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 }
