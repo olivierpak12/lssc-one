@@ -4752,32 +4752,30 @@ class _ActivityList extends StatelessWidget {
                 style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 14)
               ),
               subtitle: Text(displayHash, style: GoogleFonts.poppins(fontSize: 12, color: AppColors.textTertiary)),
-              trailing: Flexible(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      '${isDeposit ? '+' : '-'}${amount.toStringAsFixed(2)}', 
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.poppins(
-                        fontWeight: FontWeight.w700, 
-                        color: isDeposit ? AppColors.success : AppColors.warning
-                      )
-                    ),
-                    Text(
-                      status.toUpperCase(), 
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.poppins(
-                        fontSize: 10, 
-                        fontWeight: FontWeight.w700,
-                        color: status == 'confirmed' || status == 'completed' ? AppColors.success : AppColors.warning
-                      )
-                    ),
-                  ],
-                ),
+              trailing: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    '${isDeposit ? '+' : '-'}${amount.toStringAsFixed(2)}', 
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.poppins(
+                      fontWeight: FontWeight.w700, 
+                      color: isDeposit ? AppColors.success : AppColors.warning
+                    )
+                  ),
+                  Text(
+                    status.toUpperCase(), 
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.poppins(
+                      fontSize: 10, 
+                      fontWeight: FontWeight.w700,
+                      color: status == 'confirmed' || status == 'completed' ? AppColors.success : AppColors.warning
+                    )
+                  ),
+                ],
               ),
             ),
           ),
