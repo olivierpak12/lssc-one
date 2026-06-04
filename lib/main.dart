@@ -4952,7 +4952,7 @@ class _AffiliatePromotionCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text('Affiliate Program', style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 16)),
-                  Text('Earn up to 23% in commissions', style: GoogleFonts.poppins(color: AppColors.textTertiary, fontSize: 12)),
+                  Text('Earn up to 21% in commissions', style: GoogleFonts.poppins(color: AppColors.textTertiary, fontSize: 12)),
                 ],
               ),
             ),

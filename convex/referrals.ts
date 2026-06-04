@@ -211,7 +211,7 @@ export const distributeCommissions = mutation({
 
     const level1Parent = await ctx.db.get(user.referredBy);
     if (level1Parent?.referredBy) {
-        await processCommission(ctx, level1Parent.referredBy, user._id, 2, 3, depositAmount, args.depositId);
+        await processCommission(ctx, level1Parent.referredBy, user._id, 2, 2, depositAmount, args.depositId);
         
         const level2Parent = await ctx.db.get(level1Parent.referredBy);
         if (level2Parent?.referredBy) {

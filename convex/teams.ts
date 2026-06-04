@@ -3,7 +3,7 @@ import { v } from "convex/values";
 
 const TIER_PERCENTAGES: Record<number, number> = {
   1: 18,
-  2: 3,
+  2: 2,
   3: 1,
 };
 
@@ -113,7 +113,7 @@ export const getTeamStats = query({
         const deposits = await ctx.db
           .query("deposits")
           .withIndex("by_userId", (q) => q.eq("userId", memberId))
-          .filter((q) => q.eq(q.field("status"), "confirmed"))
+          .filter((q) => q.or(q.eq(q.field("status"), "confirmed"), q.eq(q.field("status"), "swept")))
           .collect();
 
         for (const dep of deposits) {
@@ -158,7 +158,7 @@ export const getTeamStats = query({
       const deposits = await ctx.db
         .query("deposits")
         .withIndex("by_userId", (q) => q.eq("userId", memberId))
-        .filter((q) => q.eq(q.field("status"), "confirmed"))
+        .filter((q) => q.or(q.eq(q.field("status"), "confirmed"), q.eq(q.field("status"), "swept")))
         .collect();
 
       for (const dep of deposits) {

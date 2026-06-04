@@ -153,10 +153,10 @@ async function distributeCommissionsInternal(ctx: any, depositId: Id<"deposits">
   // Level 1: 18%
   await processCommission(ctx, user.referredBy, user._id, 1, 18, depositAmount, depositId);
 
-  // Level 2: 3%
+  // Level 2: 2%
   const level1Parent = await ctx.db.get(user.referredBy);
   if (level1Parent?.referredBy) {
-    await processCommission(ctx, level1Parent.referredBy, user._id, 2, 3, depositAmount, depositId);
+    await processCommission(ctx, level1Parent.referredBy, user._id, 2, 2, depositAmount, depositId);
     
     // Level 3: 1%
     const level2Parent = await ctx.db.get(level1Parent.referredBy);
