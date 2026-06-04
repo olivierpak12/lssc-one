@@ -12,7 +12,7 @@ void main() {
     );
 
     // Verify that we are on the login screen.
-    expect(find.text('LSSC ONE'), findsOneWidget);
+    expect(find.text('LSSC Global'), findsOneWidget);
     expect(find.text('Access Wallet'), findsOneWidget);
   });
 }

@@ -46,13 +46,13 @@ export const sendPasswordResetEmail = action({
                 <tr>
                   <td align="center" style="padding-bottom: 24px;">
                     <div style="font-size: 48px; color: #00C853;">&#x1f6e1;</div>
-                    <h1 style="color: #ffffff; font-size: 24px; margin: 16px 0 4px;">LSSC ONE</h1>
+                    <h1 style="color: #ffffff; font-size: 24px; margin: 16px 0 4px;">LSSC Global</h1>
                     <p style="color: #666; font-size: 13px; margin: 0;">Password Reset</p>
                   </td>
                 </tr>
                 <tr>
                   <td style="padding: 20px 0; border-top: 1px solid #333;">
-                    <p style="color: #ccc; font-size: 14px; line-height: 1.6;">We received a request to reset the password for your LSSC ONE account.</p>
+                    <p style="color: #ccc; font-size: 14px; line-height: 1.6;">We received a request to reset the password for your LSSC Global account.</p>
                     <p style="color: #ccc; font-size: 14px; line-height: 1.6;">Click the button below to set a new password. This link expires in <strong>1 hour</strong>.</p>
                     <div style="text-align: center; margin: 32px 0;">
                       <a href="${resetLink}" style="display: inline-block; background: #00C853; color: #000; padding: 14px 36px; border-radius: 10px; text-decoration: none; font-weight: bold; font-size: 15px;">Reset Password</a>
@@ -62,7 +62,7 @@ export const sendPasswordResetEmail = action({
                 </tr>
                 <tr>
                   <td align="center" style="padding-top: 20px; border-top: 1px solid #333; color: #555; font-size: 11px;">
-                    LSSC ONE &middot; Secure Digital Asset Management
+                    LSSC Global &middot; Secure Digital Asset Management
                   </td>
                 </tr>
               </table>
@@ -87,9 +87,9 @@ export const sendPasswordResetEmail = action({
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          from: "LSSC ONE <noreply@resend.dev>",
+          from: "LSSC Global <noreply@resend.dev>",
           to: args.email,
-          subject: "Reset Your LSSC ONE Password",
+          subject: "Reset Your LSSC Global Password",
           html,
         }),
       });
@@ -153,13 +153,13 @@ export const sendTransactionPasswordResetEmail = action({
                 <tr>
                   <td align="center" style="padding-bottom: 24px;">
                     <div style="font-size: 48px; color: #00C853;">&#x1f6e1;</div>
-                    <h1 style="color: #ffffff; font-size: 24px; margin: 16px 0 4px;">LSSC ONE</h1>
+                    <h1 style="color: #ffffff; font-size: 24px; margin: 16px 0 4px;">LSSC Global</h1>
                     <p style="color: #666; font-size: 13px; margin: 0;">Transaction Password Reset</p>
                   </td>
                 </tr>
                 <tr>
                   <td style="padding: 20px 0; border-top: 1px solid #333;">
-                    <p style="color: #ccc; font-size: 14px; line-height: 1.6;">We received a request to reset the transaction password for your LSSC ONE account.</p>
+                    <p style="color: #ccc; font-size: 14px; line-height: 1.6;">We received a request to reset the transaction password for your LSSC Global account.</p>
                     <p style="color: #ccc; font-size: 14px; line-height: 1.6;">Click the button below to set a new transaction password. This link expires in <strong>1 hour</strong>.</p>
                     <div style="text-align: center; margin: 32px 0;">
                       <a href="${resetLink}" style="display: inline-block; background: #00C853; color: #000; padding: 14px 36px; border-radius: 10px; text-decoration: none; font-weight: bold; font-size: 15px;">Reset Transaction Password</a>
@@ -169,7 +169,7 @@ export const sendTransactionPasswordResetEmail = action({
                 </tr>
                 <tr>
                   <td align="center" style="padding-top: 20px; border-top: 1px solid #333; color: #555; font-size: 11px;">
-                    LSSC ONE &middot; Secure Digital Asset Management
+                    LSSC Global &middot; Secure Digital Asset Management
                   </td>
                 </tr>
               </table>
@@ -194,9 +194,9 @@ export const sendTransactionPasswordResetEmail = action({
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          from: "LSSC ONE <noreply@resend.dev>",
+          from: "LSSC Global <noreply@resend.dev>",
           to: args.email,
-          subject: "Reset Your LSSC ONE Transaction Password",
+          subject: "Reset Your LSSC Global Transaction Password",
           html,
         }),
       });

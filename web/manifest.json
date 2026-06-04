@@ -1,11 +1,11 @@
 {
-    "name": "LSSC ONE",
-    "short_name": "LSSC ONE",
+    "name": "LSSC Global",
+    "short_name": "LSSC Global",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0D1117",
     "theme_color": "#0D1117",
-    "description": "Trade, earn daily rewards, and grow your team with LSSC ONE.",
+    "description": "Trade, earn daily rewards, and grow your team with LSSC Global.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

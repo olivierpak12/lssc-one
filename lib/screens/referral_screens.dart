@@ -203,7 +203,7 @@ class _ReferralCodeCard extends ConsumerWidget {
               label: 'Share Invitation',
               icon: Icons.share,
               onPressed: code == "---" ? null : () {
-                Share.share("Join me on LSSC ONE! Use my code $code to earn daily rewards together. Register here: $link");
+                Share.share("Join me on LSSC Global! Use my code $code to earn daily rewards together. Register here: $link");
               },
             ),
           ),

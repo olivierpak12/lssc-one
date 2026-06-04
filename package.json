@@ -1,7 +1,7 @@
 {
   "name": "depositsystem-backend",
   "version": "1.0.0",
-  "description": "Backend services and Convex functions for LSSC ONE",
+  "description": "Backend services and Convex functions for LSSC Global",
   "main": "index.js",
   "scripts": {
     "dev": "node scripts/dev.js",

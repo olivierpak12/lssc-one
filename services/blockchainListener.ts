@@ -79,7 +79,7 @@ const ERC20_ABI = [
 const HOT_WALLET_ADDRESS = process.env.HOT_WALLET_ADDRESS!;
 
 export async function startListeners() {
-  console.log("--- LSSC ONE Multi-Token Listener Started ---");
+  console.log("--- LSSC Global Multi-Token Listener Started ---");
   
   for (const network of NETWORKS) {
     if (!network.rpc) {
