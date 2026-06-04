@@ -51,6 +51,7 @@ export const getTeamStats = query({
       v.literal("yesterday"),
       v.literal("last7days"),
       v.literal("thismonth"),
+      v.literal("thisyear"),
     ),
   },
   handler: async (ctx, args) => {
@@ -79,6 +80,11 @@ export const getTeamStats = query({
       case "thismonth": {
         const d = new Date(now);
         periodStart = new Date(d.getFullYear(), d.getMonth(), 1).getTime();
+        break;
+      }
+      case "thisyear": {
+        const d = new Date(now);
+        periodStart = new Date(d.getFullYear(), 0, 1).getTime();
         break;
       }
     }
