@@ -184,18 +184,18 @@ class MainShell extends StatelessWidget {
               Expanded(child: child),
             ],
           ),
-          const Positioned(
-            right: 24,
-            bottom: 24,
-            child: SupportChatButton(),
-          ),
+          const SupportChatButton(),
         ],
       );
     }
 
     return Scaffold(
-      body: child,
-      floatingActionButton: const SupportChatButton(),
+      body: Stack(
+        children: [
+          child,
+          const SupportChatButton(),
+        ],
+      ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           border: Border(top: BorderSide(color: AppColors.borderSubtle, width: 0.5)),
@@ -1977,31 +1977,31 @@ class _LsscCardState extends ConsumerState<LsscCard> {
     return AppPressable(
       onTap: widget.canBuy ? null : null,
       child: Opacity(
-        opacity: isDisabledByBalance ? 0.4 : 1.0,
+        opacity: isDisabledByBalance ? 0.6 : 1.0,
         child: AppCard(
-          borderRadius: 20,
-          padding: const EdgeInsets.all(12),
+          borderRadius: 16,
+          padding: const EdgeInsets.all(10),
           color: isHighlighted
-              ? const Color(0xFF0C2B16)
+              ? AppColors.overlayGreen
               : AppColors.surfaceCard,
           borderColor: isHighlighted
-              ? AppColors.primary
+              ? AppColors.borderPrimary
               : AppColors.overlayGreenMedium,
           borderWidth: isHighlighted ? 1.5 : 1,
           glowColor: isHighlighted ? AppColors.primary : null,
           child: Row(
             children: [
               _buildImage(),
-              const SizedBox(width: 14),
+              const SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     _buildDetails(),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 4),
                     _buildStatsRow(),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 8),
                     _buildAction(),
                   ],
                 ),
@@ -2015,11 +2015,11 @@ class _LsscCardState extends ConsumerState<LsscCard> {
 
   Widget _buildImage() {
     final isCompact = MediaQuery.of(context).size.width > 900;
-    final imgWidth = isCompact ? 80.0 : 92.0;
-    final imgHeight = isCompact ? 96.0 : 120.0;
+    final imgWidth = isCompact ? 64.0 : 72.0;
+    final imgHeight = isCompact ? 76.0 : 86.0;
 
     return ClipRRect(
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(10),
       child: SizedBox(
         width: imgWidth,
         height: imgHeight,
@@ -2044,8 +2044,13 @@ class _LsscCardState extends ConsumerState<LsscCard> {
   }
 
   Widget _buildDetails() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    final badge = widget.isOwned
+        ? 'Currently Owned'
+        : widget.isNextPackage
+            ? 'Next upgrade'
+            : null;
+
+    return Row(
       children: [
         Text(
           widget.bike.name,
@@ -2057,34 +2062,16 @@ class _LsscCardState extends ConsumerState<LsscCard> {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
-        const SizedBox(height: 6),
-        if (widget.isOwned)
+        if (badge != null) ...[
+          const SizedBox(width: 8),
           Container(
-            margin: const EdgeInsets.only(bottom: 6),
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
               color: const Color(0xFF00C853).withOpacity(0.12),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
-              'Currently Owned',
-              style: GoogleFonts.poppins(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: const Color(0xFF00C853),
-              ),
-            ),
-          )
-        else if (widget.isNextPackage)
-          Container(
-            margin: const EdgeInsets.only(bottom: 6),
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: const Color(0xFF00C853).withOpacity(0.12),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              'Next upgrade',
+              badge,
               style: GoogleFonts.poppins(
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
@@ -2092,8 +2079,10 @@ class _LsscCardState extends ConsumerState<LsscCard> {
               ),
             ),
           ),
+        ],
+        const Spacer(),
         Text(
-          'Price: \$${widget.bike.equipmentPrice.toStringAsFixed(2)}',
+          '\$${widget.bike.equipmentPrice.toStringAsFixed(2)}',
           style: GoogleFonts.poppins(
             fontSize: 12,
             fontWeight: FontWeight.w600,
@@ -2105,86 +2094,48 @@ class _LsscCardState extends ConsumerState<LsscCard> {
   }
 
   Widget _buildStatsRow() {
-    // Calculate daily income percentage based on price
-    final dailyPercentage = (widget.bike.dailyIncome / widget.bike.equipmentPrice * 100).toStringAsFixed(2);
+    final earnPerDay = widget.bike.dailyIncome;
+    final earnPerYear = earnPerDay * 365;
+    final labelStyle = GoogleFonts.poppins(
+      fontSize: 11,
+      fontWeight: FontWeight.w500,
+      color: AppColors.textTertiary,
+    );
+    final valueStyle = GoogleFonts.poppins(
+      fontSize: 12,
+      fontWeight: FontWeight.w700,
+      color: AppColors.primary,
+    );
     
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Rate of return
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Expanded(
-              child: Text(
-                'Rate of return',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.poppins(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.grey[400],
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              '$dailyPercentage%',
-              style: GoogleFonts.poppins(
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                color: const Color(0xFF4CAF50),
-              ),
-            ),
+            Text('Earn per day', style: labelStyle),
+            Text('\$${earnPerDay.toStringAsFixed(2)}', style: valueStyle),
           ],
         ),
-        const SizedBox(height: 6),
-        // Invest cycle (daily income)
+        const SizedBox(height: 4),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Expanded(
-              child: Text(
-                'Invest cycle',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.poppins(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.grey[400],
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              '\$${widget.bike.dailyIncome.toStringAsFixed(2)}/day',
-              style: GoogleFonts.poppins(
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                color: const Color(0xFF81C784),
-              ),
-            ),
+            Text('Earn per year', style: labelStyle),
+            Text('\$${earnPerYear.toStringAsFixed(2)}', style: valueStyle),
           ],
         ),
-        const SizedBox(height: 6),
-        // Available investments
+        const SizedBox(height: 4),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
+            Text('Period', style: labelStyle),
             Text(
-              'Available',
-              style: GoogleFonts.poppins(
-                fontSize: 11,
-                fontWeight: FontWeight.w500,
-                color: Colors.grey[400],
-              ),
-            ),
-            Text(
-              'Unlimited',
+              '2 years',
               style: GoogleFonts.poppins(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: Colors.grey[300],
+                color: AppColors.textSecondary,
               ),
             ),
           ],
@@ -2195,89 +2146,63 @@ class _LsscCardState extends ConsumerState<LsscCard> {
 
   Widget _buildAction() {
     if (widget.isOwned) {
-      return Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(10),
-          color: const Color(0xFF00C853).withValues(alpha: 0.1),
-          border: Border.all(
-            color: const Color(0xFF00C853).withValues(alpha: 0.4),
-          ),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.check_circle, size: 14, color: const Color(0xFF00C853)),
-            const SizedBox(width: 6),
-            Text(
-              'Currently Owned',
-              style: GoogleFonts.poppins(
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                color: const Color(0xFF00C853),
-              ),
+      return Row(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          Icon(Icons.check_circle, size: 14, color: AppColors.primary),
+          const SizedBox(width: 4),
+          Text(
+            'Owned',
+            style: GoogleFonts.poppins(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: AppColors.primary,
             ),
-          ],
-        ),
+          ),
+        ],
       );
     }
 
     if (!widget.canBuy) {
-      return Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(10),
-          color: Colors.grey[850],
-          border: Border.all(
-            color: Colors.grey[700]!,
-          ),
+      return Text(
+        widget.disabledReason ?? 'Insufficient balance',
+        style: GoogleFonts.poppins(
+          fontSize: 11,
+          fontWeight: FontWeight.w500,
+          color: AppColors.textTertiary,
         ),
-        child: Text(
-          widget.disabledReason ?? 'Insufficient balance',
-          style: GoogleFonts.poppins(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: Colors.grey[400],
-          ),
-          textAlign: TextAlign.center,
-        ),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
       );
     }
 
     return Row(
       children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '\$${widget.bike.equipmentPrice.toStringAsFixed(2)}',
-              style: GoogleFonts.poppins(
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-                color: AppColors.primary,
-              ),
-            ),
-          ],
+        Text(
+          '\$${widget.bike.equipmentPrice.toStringAsFixed(2)}',
+          style: GoogleFonts.poppins(
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+            color: AppColors.primary,
+          ),
         ),
         const Spacer(),
         ElevatedButton(
           onPressed: _isLoading ? null : _joinLssc,
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF00C853),
-            disabledBackgroundColor: Colors.grey[700],
+            backgroundColor: AppColors.primary,
+            disabledBackgroundColor: AppColors.surfaceElevated,
             foregroundColor: Colors.black,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(10),
             ),
             elevation: 0,
           ),
           child: _isLoading
               ? const SizedBox(
-                  width: 16,
-                  height: 16,
+                  width: 14,
+                  height: 14,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
                     color: Colors.black,
@@ -2288,7 +2213,6 @@ class _LsscCardState extends ConsumerState<LsscCard> {
                   style: GoogleFonts.poppins(
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
-                    color: Colors.black,
                   ),
                 ),
         ),
@@ -2336,13 +2260,8 @@ class _TeamScreenState extends ConsumerState<TeamScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _buildPeriodSelector(),
-                const SizedBox(height: 20),
-                _buildStatRow([
-                  ('Team A', '$aCount', AppColors.success),
-                  ('Team B', '$bCount', AppColors.accentBlue),
-                  ('Team C', '$cCount', AppColors.accentPurple),
-                ]),
-                const SizedBox(height: 20),
+                const SizedBox(height: 24),
+                // Premium team benefit cards
                 Row(
                   children: [
                     Expanded(child: _buildTeamCard(title: 'Team A', count: '$aCount', percent: '$aIncome%', color: AppColors.success, gradientColors: [const Color(0xFF1B5E20).withValues(alpha: 0.3), Colors.transparent])),
@@ -2352,6 +2271,10 @@ class _TeamScreenState extends ConsumerState<TeamScreen> {
                     Expanded(child: _buildTeamCard(title: 'Team C', count: '$cCount', percent: '$cIncome%', color: AppColors.accentPurple, gradientColors: [AppColors.overlayPurpleSoft, Colors.transparent])),
                   ],
                 ),
+                const SizedBox(height: 24),
+                _buildGainsCard(data),
+                const SizedBox(height: 24),
+                _buildInviteCard(),
                 const SizedBox(height: 24),
                 _buildRecentCommissions(),
               ],
@@ -2372,44 +2295,359 @@ class _TeamScreenState extends ConsumerState<TeamScreen> {
     required List<Color> gradientColors,
   }) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 10),
+      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 14),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(20),
         gradient: LinearGradient(
-          colors: gradientColors,
+          colors: [
+            gradientColors[0],
+            gradientColors[1],
+          ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
-      ),
-      child: Column(
-        children: [
-          Text(title, style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.bold,
-            color: color,
-          )),
-          const SizedBox(height: 8),
-          Text(count, style: const TextStyle(
-            fontSize: 26,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          )),
-          const SizedBox(height: 4),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text('Benefits $percent', style: TextStyle(
-              fontSize: 11,
-              color: color,
-              fontWeight: FontWeight.w600,
-            )),
+        border: Border.all(color: color.withValues(alpha: 0.4), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: 0.15),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            title,
+            style: GoogleFonts.poppins(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: color,
+              letterSpacing: 0.5,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            count,
+            style: GoogleFonts.orbitron(
+              fontSize: 32,
+              fontWeight: FontWeight.w900,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.25),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: color.withValues(alpha: 0.4), width: 1),
+            ),
+            child: Text(
+              'Benefits $percent',
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                color: color,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.3,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String get _inviteLink {
+    final code = ref.read(authProvider).myInviteCode ?? '';
+    final base = Uri.base.origin;
+    return '$base/#/register?invitationCode=$code';
+  }
+
+  Future<void> _copyInviteLink() async {
+    final link = _inviteLink;
+    await Clipboard.setData(ClipboardData(text: link));
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Invitation link copied!'), behavior: SnackBarBehavior.floating),
+      );
+    }
+  }
+
+  void _shareInviteLink() {
+    final link = _inviteLink;
+    Share.share(
+      'Join me on LSSC Global! Use my invitation link: $link',
+      subject: 'Join me on LSSC Global',
+    );
+  }
+
+  Widget _buildInviteCard() {
+    final link = _inviteLink;
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 14),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        gradient: LinearGradient(
+          colors: [const Color(0xFF1B5E20).withValues(alpha: 0.3), Colors.transparent],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        border: Border.all(color: AppColors.primaryDark.withValues(alpha: 0.4), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primaryDark.withValues(alpha: 0.15),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: AppColors.overlayGreen,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(Icons.link, color: Colors.white, size: 16),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            'Invite Friends',
+            style: GoogleFonts.poppins(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: AppColors.primaryDark,
+              letterSpacing: 0.5,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.3),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: AppColors.borderSubtle),
+            ),
+            child: Text(
+              link,
+              style: const TextStyle(fontSize: 9, color: Colors.white70, fontFamily: 'monospace'),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: GestureDetector(
+                  onTap: _copyInviteLink,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: AppColors.borderSubtle),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.copy, size: 12, color: AppColors.primaryDark),
+                        const SizedBox(width: 4),
+                        Text('Copy', style: TextStyle(fontSize: 10, color: AppColors.primaryDark)),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: GestureDetector(
+                  onTap: _shareInviteLink,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                      color: AppColors.primaryDark.withValues(alpha: 0.2),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.share, size: 12, color: AppColors.primaryDark),
+                        const SizedBox(width: 4),
+                        Text('Share', style: TextStyle(fontSize: 10, color: AppColors.primaryDark)),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGainsCard(Map<String, dynamic> data) {
+    final teamA = data['teamA'] as Map<String, dynamic>? ?? {};
+    final teamB = data['teamB'] as Map<String, dynamic>? ?? {};
+    final teamC = data['teamC'] as Map<String, dynamic>? ?? {};
+
+    final totalMembers = (teamA['count'] as int? ?? 0) + (teamB['count'] as int? ?? 0) + (teamC['count'] as int? ?? 0);
+    final newMembersToday = data['newMembersToday'] as int? ?? 0;
+    
+    // Calculate total recharge amounts
+    BigInt totalRecharge = BigInt.zero;
+    for (final team in [teamA, teamB, teamC]) {
+      final rechargeStr = team['rechargeAmount'] as String? ?? '0';
+      try {
+        totalRecharge += BigInt.parse(rechargeStr);
+      } catch (_) {}
+    }
+    final rechargeDisplay = (totalRecharge / BigInt.from(1000000)).toStringAsFixed(2);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        gradient: LinearGradient(
+          colors: [
+            AppColors.primary.withValues(alpha: 0.15),
+            AppColors.primary.withValues(alpha: 0.05),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Selection period',
+            style: GoogleFonts.poppins(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Colors.white70,
+            ),
+          ),
+          const SizedBox(height: 20),
+          // First row: Team Size, Team Recharge, Team Withdrawal
+          Row(
+            children: [
+              Expanded(
+                child: _buildGainStatItem(
+                  title: 'Team size',
+                  value: '$totalMembers',
+                  subtitle: '',
+                  icon: Icons.people_outline,
+                  color: AppColors.success,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildGainStatItem(
+                  title: 'Team recharge',
+                  value: '\$$rechargeDisplay',
+                  subtitle: '',
+                  icon: Icons.trending_up,
+                  color: AppColors.accentBlue,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildGainStatItem(
+                  title: 'Team Withdrawal',
+                  value: '\$0.00',
+                  subtitle: '',
+                  icon: Icons.trending_down,
+                  color: AppColors.warning,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          // Second row: New team, First time recharge, First withdrawal
+          Row(
+            children: [
+              Expanded(
+                child: _buildGainStatItem(
+                  title: 'New team',
+                  value: '$newMembersToday',
+                  subtitle: '',
+                  icon: Icons.person_add_outlined,
+                  color: AppColors.success,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildGainStatItem(
+                  title: 'First time recharge',
+                  value: '0',
+                  subtitle: '',
+                  icon: Icons.auto_graph,
+                  color: AppColors.accentBlue,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildGainStatItem(
+                  title: 'First withdrawal',
+                  value: '0',
+                  subtitle: '',
+                  icon: Icons.wallet_outlined,
+                  color: AppColors.warning,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGainStatItem({
+    required String title,
+    required String value,
+    required String subtitle,
+    required IconData icon,
+    required Color color,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, color: color, size: 18),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          value,
+          style: GoogleFonts.poppins(
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+            color: Colors.white,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 4),
+        Text(
+          title,
+          style: GoogleFonts.poppins(
+            fontSize: 11,
+            color: Colors.white60,
+          ),
+          textAlign: TextAlign.center,
+        ),
+      ],
     );
   }
 
@@ -4490,9 +4728,13 @@ class _MessageItem extends ConsumerWidget {
       },
       onDismissed: (direction) async {
         final id = message['_id'].toString();
+        // Give the dismissal animation time to complete before invalidating
+        await Future.delayed(const Duration(milliseconds: 200));
         await ref.read(apiServiceProvider).deleteMessage(id, userId);
-        ref.invalidate(messagesProvider(userId));
-        ref.invalidate(unreadCountProvider(userId));
+        if (context.mounted) {
+          ref.invalidate(messagesProvider(userId));
+          ref.invalidate(unreadCountProvider(userId));
+        }
       },
       child: GestureDetector(
         onTap: onTap,
