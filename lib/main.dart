@@ -5082,6 +5082,8 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              _buildEthereumRecommendation(),
+              const SizedBox(height: 20),
               _buildTokenDropdown(),
               const SizedBox(height: 15),
               _buildNetworkDropdown(),
@@ -5204,6 +5206,34 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
           Icon(Icons.warning_amber_rounded, color: AppColors.warning, size: 22),
           AppSpacing.wMd,
           Expanded(child: Text('Only send $selectedToken to this address via $selectedNetwork. Using unsupported networks will result in permanent loss.', style: GoogleFonts.poppins(fontSize: 12, color: AppColors.warning))),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEthereumRecommendation() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A2E1A),
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: Colors.greenAccent.withValues(alpha: 0.5), width: 1.5),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.info_outline_rounded, color: Colors.greenAccent, size: 22),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'We recommend using Ethereum network for the best experience and lowest fees.',
+              style: GoogleFonts.poppins(
+                fontSize: 13,
+                color: Colors.greenAccent,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -5389,6 +5419,34 @@ class _WithdrawScreenState extends ConsumerState<WithdrawScreen> {
     );
   }
 
+  Widget _buildEthereumRecommendationWithdraw() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A2E1A),
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: Colors.greenAccent.withValues(alpha: 0.5), width: 1.5),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.info_outline_rounded, color: Colors.greenAccent, size: 22),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'We recommend using Ethereum network for the best experience and lowest fees.',
+              style: GoogleFonts.poppins(
+                fontSize: 13,
+                color: Colors.greenAccent,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final auth = ref.watch(authProvider);
@@ -5411,6 +5469,8 @@ class _WithdrawScreenState extends ConsumerState<WithdrawScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+            _buildEthereumRecommendationWithdraw(),
+            const SizedBox(height: 20),
             _buildSectionTitle('Network & Asset'),
             const SizedBox(height: 12),
             Container(
