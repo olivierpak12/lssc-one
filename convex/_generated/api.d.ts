@@ -16,6 +16,7 @@ import type * as deposits from "../deposits.js";
 import type * as etherscanActions from "../etherscanActions.js";
 import type * as http from "../http.js";
 import type * as init from "../init.js";
+import type * as lib_rpcHelpers from "../lib/rpcHelpers.js";
 import type * as messages from "../messages.js";
 import type * as networks from "../networks.js";
 import type * as password from "../password.js";
@@ -45,6 +46,7 @@ declare const fullApi: ApiFromModules<{
   etherscanActions: typeof etherscanActions;
   http: typeof http;
   init: typeof init;
+  "lib/rpcHelpers": typeof lib_rpcHelpers;
   messages: typeof messages;
   networks: typeof networks;
   password: typeof password;
