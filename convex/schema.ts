@@ -63,6 +63,7 @@ export default defineSchema({
     chainId: v.number(),
     network: v.string(),
     amount: v.string(),
+    amountUsd: v.optional(v.number()),
     token: v.string(),
     tokenContract: v.optional(v.string()),
     sweepTxHash: v.optional(v.string()), 

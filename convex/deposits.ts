@@ -39,13 +39,14 @@ export const recordDeposit = mutation({
       .query("deposits")
       .withIndex("by_txHash", (q) => q.eq("txHash", args.txHash))
       .first();
-    
+
     if (existing) {
       return { id: existing._id, status: existing.status, isNew: false };
     }
 
     const id = await ctx.db.insert("deposits", {
       ...args,
+      amountUsd: Number(BigInt(args.amount)) / 1_000_000, // 20000000 → 20.0
       confirmations: 0,
       status: "pending",
       createdAt: Date.now(),
@@ -67,14 +68,22 @@ export const recordDeposit = mutation({
 export const updateStatus = mutation({
   args: {
     depositId: v.id("deposits"),
-    status: v.union(v.literal("pending"), v.literal("confirmed"), v.literal("failed"), v.literal("swept")),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("confirmed"),
+      v.literal("failed"),
+      v.literal("swept"),
+    ),
     sweepTxHash: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const deposit = await ctx.db.get(args.depositId);
     if (!deposit) return;
 
-    if (args.status === "confirmed" && (deposit.status === "confirmed" || deposit.status === "swept")) {
+    if (
+      args.status === "confirmed" &&
+      (deposit.status === "confirmed" || deposit.status === "swept")
+    ) {
       return;
     }
 
@@ -113,14 +122,22 @@ export const updateStatus = mutation({
     if (args.status === "confirmed" && deposit.status === "pending") {
       const balance = await ctx.db
         .query("balances")
-        .withIndex("by_user_chain_token", (q) => 
-          q.eq("userId", deposit.userId).eq("chainId", deposit.chainId).eq("tokenSymbol", deposit.token)
+        .withIndex("by_user_chain_token", (q) =>
+          q
+            .eq("userId", deposit.userId)
+            .eq("chainId", deposit.chainId)
+            .eq("tokenSymbol", deposit.token),
         )
         .first();
 
       if (balance) {
-        const newAmount = (BigInt(balance.amount) + BigInt(deposit.amount)).toString();
-        await ctx.db.patch(balance._id, { amount: newAmount, updatedAt: Date.now() });
+        const newAmount = (
+          BigInt(balance.amount) + BigInt(deposit.amount)
+        ).toString();
+        await ctx.db.patch(balance._id, {
+          amount: newAmount,
+          updatedAt: Date.now(),
+        });
       } else {
         await ctx.db.insert("balances", {
           userId: deposit.userId,
@@ -136,11 +153,15 @@ export const updateStatus = mutation({
   },
 });
 
-async function distributeCommissionsInternal(ctx: any, depositId: Id<"deposits">) {
+async function distributeCommissionsInternal(
+  ctx: any,
+  depositId: Id<"deposits">,
+) {
   const deposit = await ctx.db.get(depositId);
   if (!deposit) return;
 
-  const existing = await ctx.db.query("referralCommissions")
+  const existing = await ctx.db
+    .query("referralCommissions")
     .withIndex("by_depositId", (q: any) => q.eq("depositId", depositId))
     .first();
   if (existing) return;
@@ -151,24 +172,56 @@ async function distributeCommissionsInternal(ctx: any, depositId: Id<"deposits">
   const depositAmount = parseFloat(deposit.amount) / 1000000;
 
   // Level 1: 18%
-  await processCommission(ctx, user.referredBy, user._id, 1, 18, depositAmount, depositId);
+  await processCommission(
+    ctx,
+    user.referredBy,
+    user._id,
+    1,
+    18,
+    depositAmount,
+    depositId,
+  );
 
   // Level 2: 2%
   const level1Parent = await ctx.db.get(user.referredBy);
   if (level1Parent?.referredBy) {
-    await processCommission(ctx, level1Parent.referredBy, user._id, 2, 2, depositAmount, depositId);
-    
+    await processCommission(
+      ctx,
+      level1Parent.referredBy,
+      user._id,
+      2,
+      2,
+      depositAmount,
+      depositId,
+    );
+
     // Level 3: 1%
     const level2Parent = await ctx.db.get(level1Parent.referredBy);
     if (level2Parent?.referredBy) {
-      await processCommission(ctx, level2Parent.referredBy, user._id, 3, 1, depositAmount, depositId);
+      await processCommission(
+        ctx,
+        level2Parent.referredBy,
+        user._id,
+        3,
+        1,
+        depositAmount,
+        depositId,
+      );
     }
   }
 }
 
-async function processCommission(ctx: any, toUserId: Id<"users">, fromUserId: Id<"users">, level: number, percent: number, depositAmount: number, depositId: Id<"deposits">) {
+async function processCommission(
+  ctx: any,
+  toUserId: Id<"users">,
+  fromUserId: Id<"users">,
+  level: number,
+  percent: number,
+  depositAmount: number,
+  depositId: Id<"deposits">,
+) {
   const commissionAmount = (depositAmount * percent) / 100;
-  
+
   await ctx.db.insert("referralCommissions", {
     fromUserId,
     toUserId,
@@ -177,14 +230,15 @@ async function processCommission(ctx: any, toUserId: Id<"users">, fromUserId: Id
     depositAmount,
     commissionAmount,
     depositId,
-    createdAt: Date.now()
+    createdAt: Date.now(),
   });
 
   const recipient = await ctx.db.get(toUserId);
   if (recipient) {
     await ctx.db.patch(toUserId, {
       referralBalance: (recipient.referralBalance || 0) + commissionAmount,
-      totalReferralEarnings: (recipient.totalReferralEarnings || 0) + commissionAmount
+      totalReferralEarnings:
+        (recipient.totalReferralEarnings || 0) + commissionAmount,
     });
   }
 }

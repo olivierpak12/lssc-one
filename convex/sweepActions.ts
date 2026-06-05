@@ -5,46 +5,11 @@ import { v } from "convex/values";
 import { api } from "./_generated/api";
 import { ethers } from "ethers";
 import * as crypto from "crypto";
-import { getProvider, withRetry } from "./lib/rpcHelpers";
+import { getProvider, withRetry, getGasFees, ChainGasFees } from "./lib/rpcHelpers";
 
-// ─── Polygon Gas Station ────────────────────────────────────────────────────
-// Polygon's EIP-1559 is non-standard. ethers.js defaults maxPriorityFeePerGas
-// to 1.5 gwei, but Polygon mainnet requires a MINIMUM of 25 gwei.
-// Using gasPrice alone (legacy tx) also causes stuck mempool issues on Polygon.
-// The canonical fix is to fetch from Polygon's own gas station oracle.
-
-interface PolygonGasFees {
-  maxFeePerGas: bigint;
-  maxPriorityFeePerGas: bigint;
-}
-
-async function getPolygonGasFees(): Promise<PolygonGasFees> {
-  const FALLBACK_PRIORITY = ethers.parseUnits("50", "gwei");  // 50 gwei — safe fallback
-  const FALLBACK_MAX = ethers.parseUnits("300", "gwei");      // 300 gwei — covers spikes
-
-  try {
-    const res = await fetch("https://gasstation.polygon.technology/v2");
-    if (!res.ok) throw new Error(`Gas station returned ${res.status}`);
-    const data = await res.json();
-
-    // Use "fast" tier — necessary for sweeps that need reliable inclusion
-    const priorityGwei = Math.ceil(data.fast.maxPriorityFee * 1.2); // +20% on top of fast
-    const maxGwei = Math.ceil(data.fast.maxFee * 1.2);
-
-    const maxPriorityFeePerGas = ethers.parseUnits(String(priorityGwei), "gwei");
-    const maxFeePerGas = ethers.parseUnits(String(maxGwei), "gwei");
-
-    console.log(`[Gas] ⛽ Gas station: priority=${priorityGwei} gwei, maxFee=${maxGwei} gwei`);
-    return { maxFeePerGas, maxPriorityFeePerGas };
-  } catch (err) {
-    console.warn(`[Gas] ⚠️ Gas station fetch failed, using fallback: ${err}`);
-    return { maxFeePerGas: FALLBACK_MAX, maxPriorityFeePerGas: FALLBACK_PRIORITY };
-  }
-}
-
-// ─── Robust tx wait ─────────────────────────────────────────────────────────
-// ethers v6 bug: tx.wait() hangs forever if a tx is replaced/dropped (issue #4875).
-// We poll manually using getTransactionReceipt instead of relying on wait().
+// ─── Robust tx wait ──────────────────────────────────────────────────────────
+// ethers v6 bug: tx.wait() hangs forever if a tx is replaced/dropped (#4875).
+// We poll manually using getTransactionReceipt instead.
 
 async function waitForReceipt(
   provider: ethers.JsonRpcProvider,
@@ -53,27 +18,24 @@ async function waitForReceipt(
   pollIntervalMs: number = 3_000
 ): Promise<ethers.TransactionReceipt> {
   const deadline = Date.now() + timeoutMs;
-
   while (Date.now() < deadline) {
     const receipt = await provider.getTransactionReceipt(txHash);
     if (receipt && receipt.status !== null) {
-      if (receipt.status === 0) {
-        throw new Error(`Transaction reverted on-chain: ${txHash}`);
-      }
+      if (receipt.status === 0) throw new Error(`Transaction reverted on-chain: ${txHash}`);
       return receipt;
     }
     await new Promise((r) => setTimeout(r, pollIntervalMs));
   }
-
   throw new Error(`Transaction not confirmed after ${timeoutMs / 1000}s — hash: ${txHash}`);
 }
 
 // ─── Cancel stuck nonces ─────────────────────────────────────────────────────
-// Sends 0 POL to self with high gas to cancel any stuck pending txs.
+// Sends 0 native to self with high gas to replace any stuck pending txs.
+
 async function cancelStuckNonces(
   wallet: ethers.Wallet,
   provider: ethers.JsonRpcProvider,
-  fees: PolygonGasFees
+  fees: ChainGasFees
 ): Promise<void> {
   const confirmedNonce = await provider.getTransactionCount(wallet.address, "latest");
   const pendingNonce = await provider.getTransactionCount(wallet.address, "pending");
@@ -83,15 +45,15 @@ async function cancelStuckNonces(
     return;
   }
 
-  console.warn(
-    `[Nonce] ⚠️ Found ${pendingNonce - confirmedNonce} stuck nonce(s) for ${wallet.address} — cancelling...`
-  );
+  console.warn(`[Nonce] ⚠️ Found ${pendingNonce - confirmedNonce} stuck nonce(s) — cancelling...`);
 
-  // Use 2x the current fast gas to guarantee replacement
-  const cancelFees = {
-    maxFeePerGas: (fees.maxFeePerGas * 2n),
-    maxPriorityFeePerGas: (fees.maxPriorityFeePerGas * 2n),
-  };
+  // 2x current gas guarantees replacement
+  const cancelFees: ChainGasFees = fees.gasPrice
+    ? { gasPrice: fees.gasPrice * 2n }
+    : {
+        maxFeePerGas: fees.maxFeePerGas! * 2n,
+        maxPriorityFeePerGas: fees.maxPriorityFeePerGas! * 2n,
+      };
 
   for (let nonce = confirmedNonce; nonce < pendingNonce; nonce++) {
     try {
@@ -127,14 +89,20 @@ export const processAutoSweep = action({
     if (!walletData || !network) return { success: false, message: "Missing wallet/network info" };
 
     const rpcUrl = process.env[network.rpcUrl] || process.env[(network as any).defaultRpc];
-    const usdtAddress =
-      deposit.tokenContract ||
-      process.env[(network as any).usdtContractEnv] ||
-      network.usdtContract;
 
-    if (!rpcUrl || !usdtAddress) {
-      console.error(`[Sweep] ❌ Configuration missing for ${network.name}`);
-      return { success: false, message: "Missing RPC or USDT contract" };
+    // Resolve the correct contract address based on which token was deposited.
+    // Priority: deposit.tokenContract (explicit on-chain address) → env var override → network record.
+    // deposit.token is "USDT" or "USDC" — never assume USDT.
+    const tokenSymbol: string = (deposit.token ?? "USDT").toUpperCase();
+    const tokenAddress: string | undefined =
+      deposit.tokenContract ||
+      (tokenSymbol === "USDC"
+        ? process.env[(network as any).usdcContractEnv] || network.usdcContract
+        : process.env[(network as any).usdtContractEnv] || network.usdtContract);
+
+    if (!rpcUrl || !tokenAddress) {
+      console.error(`[Sweep] ❌ Configuration missing for ${network.name} — no ${tokenSymbol} contract address found`);
+      return { success: false, message: `Missing RPC or ${tokenSymbol} contract` };
     }
 
     const encryptionKey = process.env.ENCRYPTION_KEY;
@@ -143,11 +111,7 @@ export const processAutoSweep = action({
     let decryptedKey: string;
     try {
       const iv = Buffer.from(walletData.iv, "hex");
-      const decipher = crypto.createDecipheriv(
-        "aes-256-cbc",
-        Buffer.from(encryptionKey, "utf-8"),
-        iv
-      );
+      const decipher = crypto.createDecipheriv("aes-256-cbc", Buffer.from(encryptionKey, "utf-8"), iv);
       decryptedKey = decipher.update(walletData.encryptedPrivateKey, "hex", "utf8");
       decryptedKey += decipher.final("utf8");
       if (!decryptedKey.startsWith("0x")) decryptedKey = "0x" + decryptedKey;
@@ -171,8 +135,8 @@ export const processAutoSweep = action({
       provider
     );
 
-    const usdtContract = new ethers.Contract(
-      usdtAddress,
+    const tokenContract = new ethers.Contract(
+      tokenAddress,
       [
         "function transfer(address to, uint256 amount) public returns (bool)",
         "function balanceOf(address account) public view returns (uint256)",
@@ -181,61 +145,51 @@ export const processAutoSweep = action({
     );
 
     try {
-      console.log(
-        `[Sweep] 📡 Checking balance for ${userWallet.address} on ${network.name} (Contract: ${usdtAddress})`
-      );
+      console.log(`[Sweep] 📡 Checking ${tokenSymbol} balance for ${userWallet.address} on ${network.name} (Contract: ${tokenAddress})`);
 
-      let usdtBalance = await withRetry(
-        () => usdtContract.balanceOf(userWallet.address),
-        "balanceOf"
-      );
+      let tokenBalance = await withRetry(() => tokenContract.balanceOf(userWallet.address), "balanceOf");
 
-      if (usdtBalance === 0n) {
+      if (tokenBalance === 0n) {
         console.log("[Sweep] ⏳ Balance is 0. Waiting 5s for node sync...");
         await new Promise((r) => setTimeout(r, 5000));
-        usdtBalance = await withRetry(
-          () => usdtContract.balanceOf(userWallet.address),
-          "balanceOf (resync)"
-        );
+        tokenBalance = await withRetry(() => tokenContract.balanceOf(userWallet.address), "balanceOf (resync)");
       }
 
-      console.log(`[Sweep] 💰 On-chain Balance: ${ethers.formatUnits(usdtBalance, 6)} USDT`);
+      console.log(`[Sweep] 💰 On-chain Balance: ${ethers.formatUnits(tokenBalance, 6)} ${tokenSymbol}`);
 
-      if (usdtBalance === 0n) {
-        console.warn(`[Sweep] ❌ Wallet has 0 USDT on-chain. Cannot sweep.`);
-        return { success: false, message: "No funds found on-chain" };
+      if (tokenBalance === 0n) {
+        console.warn(`[Sweep] ❌ Wallet has 0 ${tokenSymbol} on-chain. Cannot sweep.`);
+        return { success: false, message: `No ${tokenSymbol} found on-chain` };
       }
 
-      // ─── Fetch correct Polygon EIP-1559 gas fees ──────────────────────────
-      // CRITICAL: Do NOT use gasPrice for Polygon. Must use maxFeePerGas +
-      // maxPriorityFeePerGas. Polygon requires minimum 25 gwei priority fee.
-      const fees = await getPolygonGasFees();
+      // ─── Fetch correct gas fees for THIS chain ───────────────────────────
+      // getGasFees() handles each chain correctly:
+      //   Polygon (137) → Polygon gas station oracle, EIP-1559
+      //   BSC (56/97)   → legacy gasPrice only (BSC doesn't support EIP-1559)
+      //   Ethereum (1)  → standard EIP-1559 via provider.getFeeData()
+      //   Others        → EIP-1559 with 30% buffer fallback
+      const fees = await getGasFees(network.chainId, provider);
 
       const gasLimit = 80000n;
-      // Cost estimate uses maxFeePerGas (worst case the tx will ever pay)
-      const gasNeeded = fees.maxFeePerGas * gasLimit;
+      // For cost estimate use maxFeePerGas (EIP-1559) or gasPrice (legacy)
+      const gasPriceForEstimate = fees.maxFeePerGas ?? fees.gasPrice!;
+      const gasNeeded = gasPriceForEstimate * gasLimit;
       const userNative = await provider.getBalance(userWallet.address);
 
-      console.log(
-        `[Sweep] ⛽ Gas needed: ${ethers.formatEther(gasNeeded)} MATIC, user has: ${ethers.formatEther(userNative)} MATIC`
-      );
+      console.log(`[Sweep] ⛽ Gas needed: ${ethers.formatEther(gasNeeded)} ${network.symbol}, user has: ${ethers.formatEther(userNative)} ${network.symbol}`);
 
       // ─── Gas funding ──────────────────────────────────────────────────────
       if (userNative < gasNeeded) {
         const funderBalance = await provider.getBalance(gasFunder.address);
-        console.log(`[Sweep] 🏦 Gas funder balance: ${ethers.formatEther(funderBalance)} MATIC`);
+        console.log(`[Sweep] 🏦 Gas funder balance: ${ethers.formatEther(funderBalance)} ${network.symbol}`);
 
         if (funderBalance < gasNeeded * 2n) {
-          console.error(
-            `[Sweep] ❌ Gas funder insufficient. Has: ${ethers.formatEther(funderBalance)}, needs: ${ethers.formatEther(gasNeeded * 2n)}`
-          );
-          return { success: false, error: "Gas funder wallet has insufficient MATIC." };
+          console.error(`[Sweep] ❌ Gas funder insufficient. Has: ${ethers.formatEther(funderBalance)}, needs: ${ethers.formatEther(gasNeeded * 2n)}`);
+          return { success: false, error: `Gas funder wallet has insufficient ${network.symbol}.` };
         }
 
-        // Clear any stuck nonces on the gas funder before sending
         await cancelStuckNonces(gasFunder, provider, fees);
 
-        // Use explicit "latest" nonce — never rely on auto-nonce after cancellation
         const funderNonce = await provider.getTransactionCount(gasFunder.address, "latest");
         console.log(`[Sweep] ⛽ Funding gas (nonce: ${funderNonce})...`);
 
@@ -244,29 +198,23 @@ export const processAutoSweep = action({
             gasFunder.sendTransaction({
               to: userWallet.address,
               value: gasNeeded * 2n,
-              gasLimit: 21000n,  // simple ETH transfer — 21000 is exact
+              gasLimit: 21000n,
               nonce: funderNonce,
-              maxFeePerGas: fees.maxFeePerGas,
-              maxPriorityFeePerGas: fees.maxPriorityFeePerGas,
-              // DO NOT include gasPrice — mixing gasPrice with EIP-1559 fields
-              // causes "both gasPrice and maxFeePerGas specified" error in ethers v6
+              ...fees,
             }),
           "gasFunder.sendTransaction"
         );
 
         console.log(`[Sweep] ⛽ Fund tx sent: ${fundTx.hash} — polling for receipt...`);
-
-        // Use manual polling — NOT tx.wait() which hangs forever on replaced txs (ethers#4875)
         const fundReceipt = await waitForReceipt(provider, fundTx.hash, 180_000);
         console.log(`[Sweep] ⛽ Gas funded in block ${fundReceipt.blockNumber}`);
       } else {
-        console.log(`[Sweep] ⛽ User wallet already has enough MATIC, skipping gas fund`);
+        console.log(`[Sweep] ⛽ User wallet already has enough ${network.symbol}, skipping gas fund`);
       }
 
       // ─── Sweep ────────────────────────────────────────────────────────────
-      console.log(`[Sweep] 🧹 Sweeping ${ethers.formatUnits(usdtBalance, 6)} USDT to ${hotWalletAddress}`);
+      console.log(`[Sweep] 🧹 Sweeping ${ethers.formatUnits(tokenBalance, 6)} ${tokenSymbol} to ${hotWalletAddress}`);
 
-      // Clear any stuck nonces on the user wallet before sweeping
       await cancelStuckNonces(userWallet, provider, fees);
 
       const sweepNonce = await provider.getTransactionCount(userWallet.address, "latest");
@@ -274,18 +222,15 @@ export const processAutoSweep = action({
 
       const sweepTx = await withRetry(
         () =>
-          usdtContract.transfer(hotWalletAddress, usdtBalance, {
+          tokenContract.transfer(hotWalletAddress, tokenBalance, {
             gasLimit,
             nonce: sweepNonce,
-            maxFeePerGas: fees.maxFeePerGas,
-            maxPriorityFeePerGas: fees.maxPriorityFeePerGas,
+            ...fees,
           }),
         "contract.transfer"
       );
 
       console.log(`[Sweep] 🧹 Sweep tx sent: ${sweepTx.hash} — polling for receipt...`);
-
-      // Same manual polling — avoids the ethers v6 wait() hang bug
       const sweepReceipt = await waitForReceipt(provider, sweepTx.hash, 180_000);
 
       await ctx.runMutation(api.deposits.updateStatus, {
@@ -308,7 +253,6 @@ export const sweepAllConfirmed = action({
   handler: async (ctx): Promise<{ message: string }> => {
     const depositsApi: any = api.deposits;
     const confirmed = await ctx.runQuery(depositsApi.listAllConfirmed, {});
-
     let count = 0;
     for (const d of confirmed as any[]) {
       const res: any = await ctx.runAction(api.sweepActions.processAutoSweep, { depositId: d._id });
@@ -338,41 +282,40 @@ export const repairStuckDeposits = action({
 });
 
 // ─── One-time mempool cleanup utility ────────────────────────────────────────
-// Run this once manually if you have stuck pending transactions piling up.
-// Call via Convex dashboard: clearStuckMempool({})
+// Run once from Convex dashboard to clear stuck pending txs on ANY network.
+// Pass the chainId of the network where txs are stuck.
 
 export const clearStuckMempool = action({
-  args: {},
-  handler: async (ctx): Promise<{ message: string }> => {
+  args: { chainId: v.optional(v.number()) },
+  handler: async (ctx, args): Promise<{ message: string }> => {
     const gasFunderKey = process.env.GAS_FUNDER_PRIVATE_KEY;
-    const rpcUrl = process.env.POLYGON_MAINNET_RPC;
+    if (!gasFunderKey) return { message: "Missing GAS_FUNDER_PRIVATE_KEY" };
 
-    if (!gasFunderKey || !rpcUrl) {
-      return { message: "Missing GAS_FUNDER_PRIVATE_KEY or POLYGON_MAINNET_RPC" };
-    }
+    const chainId = args.chainId ?? 137; // default Polygon if not specified
+    const network: any = await ctx.runQuery(api.networks.getNetworkInfo, { chainId });
+    if (!network) return { message: `Network with chainId ${chainId} not found` };
 
-    const provider = new ethers.JsonRpcProvider(rpcUrl);
+    const provider = getProvider(network);
     const gasFunder = new ethers.Wallet(
       gasFunderKey.startsWith("0x") ? gasFunderKey : "0x" + gasFunderKey,
       provider
     );
 
-    const fees = await getPolygonGasFees();
-
-    // 3x priority to guarantee replacement of any stuck tx
-    const cancelFees = {
-      maxFeePerGas: fees.maxFeePerGas * 3n,
-      maxPriorityFeePerGas: fees.maxPriorityFeePerGas * 3n,
-    };
+    const fees = await getGasFees(chainId, provider);
+    // 3x to guarantee replacement of any stuck tx
+    const cancelFees: ChainGasFees = fees.gasPrice
+      ? { gasPrice: fees.gasPrice * 3n }
+      : {
+          maxFeePerGas: fees.maxFeePerGas! * 3n,
+          maxPriorityFeePerGas: fees.maxPriorityFeePerGas! * 3n,
+        };
 
     const confirmedNonce = await provider.getTransactionCount(gasFunder.address, "latest");
     const pendingNonce = await provider.getTransactionCount(gasFunder.address, "pending");
 
-    console.log(`[Cleanup] Confirmed nonce: ${confirmedNonce}, Pending nonce: ${pendingNonce}`);
+    console.log(`[Cleanup] ${network.name} — confirmed: ${confirmedNonce}, pending: ${pendingNonce}`);
 
-    if (pendingNonce <= confirmedNonce) {
-      return { message: "No stuck transactions found." };
-    }
+    if (pendingNonce <= confirmedNonce) return { message: "No stuck transactions found." };
 
     let cancelled = 0;
     for (let nonce = confirmedNonce; nonce < pendingNonce; nonce++) {
@@ -393,6 +336,6 @@ export const clearStuckMempool = action({
       }
     }
 
-    return { message: `Cleared ${cancelled} stuck transaction(s).` };
+    return { message: `Cleared ${cancelled} stuck transaction(s) on ${network.name}.` };
   },
 });
