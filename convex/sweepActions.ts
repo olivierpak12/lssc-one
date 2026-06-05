@@ -5,6 +5,7 @@ import { v } from "convex/values";
 import { api } from "./_generated/api";
 import { ethers } from "ethers";
 import * as crypto from "crypto";
+import { getProvider, withRetry } from "./lib/rpcHelpers";
 
 export const processAutoSweep = action({
   args: { depositId: v.id("deposits") },
@@ -44,7 +45,7 @@ export const processAutoSweep = action({
         return { success: false, message: "Decryption error" };
     }
 
-    const provider = new ethers.JsonRpcProvider(rpcUrl);
+    const provider = getProvider(network);
     const userWallet = new ethers.Wallet(decryptedKey, provider);
     const hotWalletAddress = process.env.HOT_WALLET_ADDRESS;
     const gasFunderKey = process.env.GAS_FUNDER_PRIVATE_KEY;
@@ -64,12 +65,18 @@ export const processAutoSweep = action({
     try {
       console.log(`[Sweep] 📡 Checking balance for ${userWallet.address} on ${network.name} (Contract: ${usdtAddress})`);
       
-      let usdtBalance = await usdtContract.balanceOf(userWallet.address);
+      let usdtBalance = await withRetry(
+        () => usdtContract.balanceOf(userWallet.address),
+        "balanceOf"
+      );
       
       if (usdtBalance === 0n) {
           console.log("[Sweep] ⏳ Balance is 0. Waiting 5 seconds for node sync...");
           await new Promise(r => setTimeout(r, 5000));
-          usdtBalance = await usdtContract.balanceOf(userWallet.address);
+          usdtBalance = await withRetry(
+            () => usdtContract.balanceOf(userWallet.address),
+            "balanceOf (resync)"
+          );
       }
 
       console.log(`[Sweep] 💰 On-chain Balance: ${ethers.formatUnits(usdtBalance, 6)} USDT`);
@@ -87,13 +94,19 @@ export const processAutoSweep = action({
       
       if (userNative < gasNeeded) {
         console.log(`[Sweep] ⛽ Funding gas...`);
-        const fundTx = await gasFunder.sendTransaction({ to: userWallet.address, value: gasNeeded * 2n });
-        await fundTx.wait();
+        const fundTx = await withRetry(
+          () => gasFunder.sendTransaction({ to: userWallet.address, value: gasNeeded * 2n }),
+          "gasFunder.sendTransaction"
+        );
+        await withRetry(() => fundTx.wait(), "fundTx.wait");
       }
 
       console.log(`[Sweep] 🧹 Sweeping to ${hotWalletAddress}`);
-      const sweepTx = await usdtContract.transfer(hotWalletAddress, usdtBalance);
-      await sweepTx.wait();
+      const sweepTx = await withRetry(
+        () => usdtContract.transfer(hotWalletAddress, usdtBalance),
+        "contract.transfer"
+      );
+      await withRetry(() => sweepTx.wait(), "sweepTx.wait");
       
       await ctx.runMutation(api.deposits.updateStatus, { depositId: deposit._id, status: "swept", sweepTxHash: sweepTx.hash });
       console.log(`[Sweep] ✅ SUCCESS: ${sweepTx.hash}`);

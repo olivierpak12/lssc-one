@@ -4,6 +4,7 @@ import { action } from "./_generated/server";
 import { v } from "convex/values";
 import { api } from "./_generated/api";
 import { ethers } from "ethers";
+import { getProvider, withRetry } from "./lib/rpcHelpers";
 
 export const processWithdrawal = action({
   args: { withdrawalId: v.id("withdrawals") },
@@ -36,16 +37,14 @@ export const processWithdrawal = action({
       const network: any = await ctx.runQuery(api.networks.getNetworkInfo, { chainId: withdrawal.chainId });
       if (!network) throw new Error(`Network not supported (ChainId: ${withdrawal.chainId})`);
 
-      const rpcUrl = process.env[network.rpcUrl] || process.env[network.defaultRpc];
       const usdtAddress = process.env[network.usdtContractEnv] || network.usdtContract;
       const hotWalletKey = process.env.HOT_WALLET_PRIVATE_KEY;
 
-      if (!rpcUrl) throw new Error(`Missing RPC URL for ${network.name}`);
       if (!usdtAddress) throw new Error(`Missing USDT/USDC contract address for ${network.name}`);
       if (!hotWalletKey) throw new Error("HOT_WALLET_PRIVATE_KEY not set in Convex dashboard environment variables.");
 
       // 4. Setup Provider and Wallet
-      const provider = new ethers.JsonRpcProvider(rpcUrl);
+      const provider = getProvider(network);
       const wallet = new ethers.Wallet(hotWalletKey.startsWith("0x") ? hotWalletKey : "0x" + hotWalletKey, provider);
       
       const usdtContract = new ethers.Contract(
@@ -57,10 +56,20 @@ export const processWithdrawal = action({
       // 5. Execute On-Chain Transfer
       console.log(`[Withdraw] 💸 Sending ${withdrawal.amount} units to ${withdrawal.toAddress} on ${network.name}`);
       
-      const tx = await usdtContract.transfer(withdrawal.toAddress, withdrawal.amount);
+      const tx = await withRetry(
+        () => usdtContract.transfer(withdrawal.toAddress, withdrawal.amount),
+        "contract.transfer"
+      );
       
       console.log(`[Withdraw] ⏳ Transaction broadcast: ${tx.hash}. Waiting for block confirmation...`);
-      const receipt = await tx.wait();
+      const receipt: ethers.TransactionReceipt | null = await withRetry(
+        () => tx.wait(),
+        "tx.wait"
+      );
+
+      if (!receipt) {
+        throw new Error("Transaction receipt was not returned by the RPC node");
+      }
 
       if (receipt.status === 0) {
         throw new Error("On-chain transaction failed (reverted)");
