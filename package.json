@@ -17,10 +17,12 @@
   "dependencies": {
     "convex": "^1.39.1",
     "dotenv": "^16.4.5",
-    "ethers": "^6.11.1"
+    "ethers": "^6.11.1",
+    "nodemailer": "^8.0.10"
   },
   "devDependencies": {
     "@types/node": "^20.11.24",
+    "@types/nodemailer": "^8.0.0",
     "concurrently": "^9.2.1",
     "ts-node": "^10.9.2",
     "typescript": "^5.3.3"

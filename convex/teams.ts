@@ -172,7 +172,7 @@ export const getTeamStats = query({
       const withdrawals = await ctx.db
         .query("withdrawals")
         .withIndex("by_userId", (q) => q.eq("userId", memberId))
-        .filter((q) => q.eq(q.field("status"), "completed"))
+        .filter((q) => q.or(q.eq(q.field("status"), "completed"), q.eq(q.field("status"), "processing")))
         .collect();
 
       for (const wd of withdrawals) {
