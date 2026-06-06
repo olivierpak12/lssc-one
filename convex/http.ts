@@ -252,7 +252,7 @@ http.route({
     const appUrl = origin || "http://localhost:5199";
     try {
       const { email, token } = await ctx.runMutation(api.resetPassword.requestPasswordReset, { email: body.email });
-      await ctx.runAction(api.resetPassword.sendPasswordResetEmail, { email, token, appUrl });
+      await ctx.runAction(api.email.sendPasswordResetEmail, { email, token, appUrl });
       return jsonResponse({ message: "If the email exists, a reset link has been sent." }, 200, origin);
     } catch (e: any) {
       return jsonResponse({ message: "If the email exists, a reset link has been sent." }, 200, origin);
@@ -284,7 +284,7 @@ http.route({
     const appUrl = origin || "http://localhost:5199";
     try {
       const { email, token } = await ctx.runMutation(api.resetPassword.requestTransactionPasswordReset, { email: body.email });
-      await ctx.runAction(api.resetPassword.sendTransactionPasswordResetEmail, { email, token, appUrl });
+      await ctx.runAction(api.email.sendTransactionPasswordResetEmail, { email, token, appUrl });
       return jsonResponse({ message: "If the email exists, a reset link has been sent." }, 200, origin);
     } catch (e: any) {
       return jsonResponse({ message: "If the email exists, a reset link has been sent." }, 200, origin);

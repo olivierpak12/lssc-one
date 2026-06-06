@@ -79,6 +79,7 @@ export default defineSchema({
     chainId: v.number(),
     network: v.string(),
     amount: v.string(),
+    amountUsd: v.optional(v.number()),
     token: v.string(),
     status: v.union(v.literal("pending"), v.literal("processing"), v.literal("completed"), v.literal("failed")),
     error: v.optional(v.string()),
