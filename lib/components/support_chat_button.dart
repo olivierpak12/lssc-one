@@ -5,7 +5,9 @@ import '../theme/app_animations.dart';
 const String _supportUrl = 'https://t.me/Lssc1support';
 
 class SupportChatButton extends StatefulWidget {
-  const SupportChatButton({super.key});
+  const SupportChatButton({super.key, this.bottomOffset});
+
+  final double? bottomOffset;
 
   @override
   State<SupportChatButton> createState() => _SupportChatButtonState();
@@ -18,7 +20,8 @@ class _SupportChatButtonState extends State<SupportChatButton>
   late Animation<double> _pulseAnim;
   late Animation<double> _pressAnim;
 
-  Offset _position = Offset.zero;
+  double _right = 24;
+  double _bottom = 24;
   bool _initialized = false;
 
   @override
@@ -58,18 +61,14 @@ class _SupportChatButtonState extends State<SupportChatButton>
   @override
   Widget build(BuildContext context) {
     if (!_initialized) {
-      final size = MediaQuery.of(context).size;
-      final bottomPadding = MediaQuery.of(context).padding.bottom;
-      _position = Offset(
-        size.width - 56 - 24,
-        size.height - 56 - 24 - bottomPadding,
-      );
+      _right = 24;
+      _bottom = 24 + (widget.bottomOffset ?? 0);
       _initialized = true;
     }
 
     return Positioned(
-      left: _position.dx,
-      top: _position.dy,
+      right: _right,
+      bottom: _bottom,
       child: AnimatedBuilder(
         animation: Listenable.merge([_pulseAnim, _pressAnim]),
         builder: (context, _) {
@@ -83,7 +82,8 @@ class _SupportChatButtonState extends State<SupportChatButton>
               onTapCancel: () => _pressController.reverse(),
               onPanUpdate: (details) {
                 setState(() {
-                  _position += details.delta;
+                  _right -= details.delta.dx;
+                  _bottom -= details.delta.dy;
                 });
               },
               child: Container(

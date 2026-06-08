@@ -99,6 +99,10 @@ class ApiService {
     return await _dio.post('/action/withdrawalActions:processAllPending');
   }
 
+  Future<Response> getUserReport(String email) async {
+    return await _dio.get('/run/reports:getUserFullReport', queryParameters: {'email': email});
+  }
+
   Future<Response> getWithdrawableBalance(String userId, {String token = 'USDT'}) async {
     return await _dio.get('/run/balances:getWithdrawableBalance', queryParameters: {'userId': userId, 'token': token});
   }

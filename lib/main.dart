@@ -34,6 +34,7 @@ import 'screens/about_screen.dart';
 import 'screens/admin/admin_dashboard_screen.dart';
 import 'screens/admin/user_management_screen.dart';
 import 'screens/admin/pending_withdrawals_screen.dart';
+import 'screens/admin/user_detail_screen.dart';
 
 
 void main() {
@@ -91,6 +92,13 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(path: '/admin', builder: (context, state) => const AdminDashboardScreen()),
           GoRoute(path: '/admin/users', builder: (context, state) => const UserManagementScreen()),
           GoRoute(path: '/admin/withdrawals', builder: (context, state) => const PendingWithdrawalsScreen()),
+          GoRoute(
+            path: '/admin/user-detail',
+            builder: (context, state) {
+              final email = state.uri.queryParameters['email'] ?? '';
+              return UserDetailScreen(email: Uri.decodeComponent(email));
+            },
+          ),
           GoRoute(path: '/activity', builder: (context, state) => const ActivityHistoryScreen()),
           GoRoute(path: '/messages', builder: (context, state) => const MessagesScreen()),
         ],
@@ -201,7 +209,7 @@ class MainShell extends StatelessWidget {
       body: Stack(
         children: [
           child,
-          const SupportChatButton(),
+          const SupportChatButton(bottomOffset: 20),
         ],
       ),
       bottomNavigationBar: Container(
