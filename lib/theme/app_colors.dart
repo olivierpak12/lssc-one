@@ -82,7 +82,7 @@ class AppGradients {
     end: Alignment.bottomRight,
   );
 
-  static final surfaceToCard = LinearGradient(
+  static const surfaceToCard = LinearGradient(
     colors: [AppColors.surfaceCard, AppColors.surface],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,

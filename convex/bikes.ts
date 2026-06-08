@@ -108,7 +108,14 @@ export const buyBike = mutation({
     }
 
     const effectiveBalance = totalBalance + refundAmount;
-    const bikePriceMicros = BigInt(Math.round(BIKE_CATALOG[args.bikeId]?.price || 0 * 1000000));
+    // FIX: wrap (price ?? 0) before multiplying so * 1000000 applies to the price,
+    // not to the fallback 0. The old code `price || 0 * 1000000` was parsed as
+    // `price || (0 * 1000000)` = `price || 0` = raw dollar amount (e.g. 1800n
+    // instead of 1_800_000_000n), making every purchase effectively free.
+    const bikePriceMicros = BigInt(Math.round(
+      (BIKE_CATALOG[args.bikeId]?.price ?? 0) * 1000000
+    ));
+
     if (effectiveBalance < bikePriceMicros) {
       throw new Error("Insufficient balance");
     }
@@ -152,6 +159,11 @@ export const buyBike = mutation({
         }
       }
 
+      // Guard: ensure the full price was actually deducted
+      if (remaining > 0n) {
+        throw new Error("Insufficient balance to complete purchase after refund.");
+      }
+
       // Create new purchase with preserved lastClaimedAt
       const bike = BIKE_CATALOG[args.bikeId];
       if (bike) {
@@ -182,6 +194,11 @@ export const buyBike = mutation({
           await ctx.db.patch(balance._id, { amount: newAmount, updatedAt: Date.now() });
           remaining -= toDeduct;
         }
+      }
+
+      // Guard: ensure the full price was actually deducted
+      if (remaining > 0n) {
+        throw new Error("Insufficient balance to complete purchase.");
       }
 
       const bike = BIKE_CATALOG[args.bikeId];

@@ -46,13 +46,33 @@ export const requestWithdrawal = mutation({
       .first();
 
     const claimedMicros = earningsBalance ? BigInt(earningsBalance.amount) : 0n;
-    const referralMicros = BigInt(Math.round((user.referralBalance ?? 0) * 1000000));
+    const referralBalanceRaw = user.referralBalance ?? 0;
+    const referralMicros = BigInt(Math.round(referralBalanceRaw * 1000000));
     const availableBalance = claimedMicros + referralMicros;
 
     if (availableBalance < totalToDeduct) {
-      throw new Error(`Insufficient available earnings/referral balance. You only have \$${(Number(availableBalance) / 1000000).toFixed(2)} available.`);
+      const errorLog = {
+        event: "INSUFFICIENT_BALANCE",
+        userId: args.userId,
+        token: args.token,
+        chainId: args.chainId,
+        requestedAmount: totalToDeduct.toString(),
+        requestedFormatted: (Number(totalToDeduct) / 1000000).toFixed(2),
+        hasEarningsBalance: !!earningsBalance,
+        earningsBalanceId: earningsBalance?._id,
+        earningsAmount: earningsBalance?.amount,
+        earningsFormatted: earningsBalance ? (Number(earningsBalance.amount) / 1000000).toFixed(2) : "0.00",
+        claimedMicros: claimedMicros.toString(),
+        referralBalanceRaw,
+        referralMicros: referralMicros.toString(),
+        availableBalance: availableBalance.toString(),
+        availableFormatted: (Number(availableBalance) / 1000000).toFixed(2),
+        toAddress: args.toAddress,
+        network: args.network,
+      };
+      console.error("[WITHDRAWAL_FAILURE]", JSON.stringify(errorLog, null, 2));
+      throw new Error("Insufficient balance. You only have $" + (Number(availableBalance) / 1000000).toFixed(2) + " " + args.token + " available.");
     }
-
     let remainingToDeduct = totalToDeduct;
 
     // Deduct from claimed earnings first
@@ -78,9 +98,21 @@ export const requestWithdrawal = mutation({
     }
 
     if (remainingToDeduct > 0n) {
-      throw new Error(`Insufficient available earnings/referral balance. You only have \$${(Number(availableBalance) / 1000000).toFixed(2)} available.`);
+      const errorLog = {
+        event: "INSUFFICIENT_BALANCE_AFTER_DEDUCTION",
+        userId: args.userId,
+        token: args.token,
+        remainingToDeduct: remainingToDeduct.toString(),
+        originalAvailableBalance: availableBalance.toString(),
+        earningsBalanceId: earningsBalance?._id,
+        earningsAmount: earningsBalance?.amount,
+        referralBalanceRaw,
+        claimedMicros: claimedMicros.toString(),
+        referralMicros: referralMicros.toString(),
+      };
+      console.error("[WITHDRAWAL_FAILURE]", JSON.stringify(errorLog, null, 2));
+      throw new Error("Insufficient balance.");
     }
-
     const withdrawalId = await ctx.db.insert("withdrawals", {
       userId: args.userId,
       toAddress: args.toAddress,

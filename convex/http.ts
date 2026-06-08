@@ -368,10 +368,13 @@ http.route({
       const userId = searchParams.get("userId");
       if (!userId) return jsonResponse("Missing userId", 400, origin);
 
-      const balance = await ctx.runQuery(api.balances.getWithdrawableBalance, { userId: userId as any });
+      const token = searchParams.get("token") ?? "USDT";
+      const balance = await ctx.runQuery(api.balances.getWithdrawableBalance, { userId: userId as any, token });
       return jsonResponse({ balance }, 200, origin);
     } catch (e: any) {
-      return jsonResponse(e.message, 400, origin);
+      const rawMessage = (e?.message ?? e?.toString?.() ?? "Unknown error").toString();
+      console.error("[HTTP_BALANCE_ERROR]", rawMessage);
+      return jsonResponse({ error: "Failed to fetch balance" }, 400, origin);
     }
   }),
 });
@@ -440,7 +443,20 @@ http.route({
       const result = await ctx.runMutation(api.withdrawals.requestWithdrawal, body);
       return jsonResponse({ withdrawalId: result }, 200, origin);
     } catch (e: any) {
-      return jsonResponse(e.message, 400, origin);
+      const rawMessage = (e?.message ?? e?.toString?.() ?? "Unknown error").toString();
+      const cleanMessage = rawMessage
+        .replace(/\[CONVEX[^\]]*\]\s*/g, "")
+        .replace(/Uncaught Error:\s*/g, "")
+        .replace(/\n.*$/s, "")
+        .trim();
+      console.error("[HTTP_WITHDRAWAL_ERROR]", JSON.stringify({
+        rawMessage,
+        cleanMessage,
+        userId: body?.userId,
+        token: body?.token,
+        amount: body?.amount,
+      }));
+      return jsonResponse({ error: cleanMessage }, 400, origin);
     }
   }),
 });

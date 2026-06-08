@@ -26,15 +26,17 @@ export const getTotalUsdtBalance = query({
 });
 
 export const getWithdrawableBalance = query({
-  args: { userId: v.id("users") },
+  args: { userId: v.id("users"), token: v.optional(v.string()) },
   handler: async (ctx, args) => {
     const user = await ctx.db.get(args.userId);
     if (!user) return "0";
 
+    const tokenSymbol = args.token ?? "USDT";
+
     const earningsBalance = await ctx.db
       .query("balances")
       .withIndex("by_user_chain_token", (q) =>
-        q.eq("userId", args.userId).eq("chainId", 0).eq("tokenSymbol", "USDT")
+        q.eq("userId", args.userId).eq("chainId", 0).eq("tokenSymbol", tokenSymbol)
       )
       .first();
 

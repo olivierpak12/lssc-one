@@ -24,11 +24,11 @@ final networksProvider = FutureProvider<List<dynamic>>((ref) async {
   return [];
 });
 
-final withdrawableBalanceProvider = FutureProvider.family<String, String>((ref, userId) async {
-  if (userId.isEmpty) return "0";
+final withdrawableBalanceProvider = FutureProvider.family<String, ({String userId, String token})>((ref, args) async {
+  if (args.userId.isEmpty) return "0";
   final apiService = ref.read(apiServiceProvider);
   try {
-    final response = await apiService.getWithdrawableBalance(userId);
+    final response = await apiService.getWithdrawableBalance(args.userId, token: args.token);
     if (response.data is Map && response.data['balance'] != null) {
       return response.data['balance'].toString();
     }
