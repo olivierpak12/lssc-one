@@ -1,6 +1,6 @@
 import { query } from "./_generated/server";
 import { v } from "convex/values";
-import { Id } from "./_generated/dataModel";
+import { Doc, Id } from "./_generated/dataModel";
 
 export const getUserFullReport = query({
   args: { email: v.string() },
@@ -48,42 +48,46 @@ export const getUserFullReport = query({
           .collect(),
       ]);
 
-    const fromUserIds = [...new Set(commissions.map((c) => c.fromUserId))];
+    const fromUserIds = Array.from(new Set(commissions.map((c) => c.fromUserId)));
     const fromUsers = new Map<Id<"users">, string>();
     for (const id of fromUserIds) {
       const u = await ctx.db.get(id);
-      fromUsers.set(id, u?.username || u?.email.split("@")[0] || "Unknown");
+      if (u && "email" in u) {
+        const userDoc = u as Doc<"users">;
+        fromUsers.set(id, userDoc.username || userDoc.email.split("@")[0] || "Unknown");
+      }
     }
 
-    const teamMemberIds = [...new Set(referralTree.map((t) => t.userId))];
+    const teamMemberIds = Array.from(new Set(referralTree.map((t) => t.userId)));
     const teamMemberInfo = new Map<
       Id<"users">,
       { username: string; email: string }
     >();
     for (const id of teamMemberIds) {
       const u = await ctx.db.get(id);
-      if (u) {
+      if (u && "email" in u) {
+        const userDoc = u as Doc<"users">;
         teamMemberInfo.set(id, {
-          username: u.username || u.email.split("@")[0],
-          email: u.email,
+          username: userDoc.username || userDoc.email.split("@")[0],
+          email: userDoc.email,
         });
       }
     }
 
-    const WITHDRAWAL_FEE = 250000n;
+    const WITHDRAWAL_FEE = BigInt(250000);
     const MICRO = 1_000_000;
 
     const totalDepositedMicro = deposits
       .filter((d) => d.status === "confirmed" || d.status === "swept")
-      .reduce((acc, d) => acc + BigInt(d.amount), 0n);
+      .reduce((acc, d) => acc + BigInt(d.amount), BigInt(0));
 
     const totalWithdrawnMicro = withdrawals
       .filter((w) => w.status === "completed")
-      .reduce((acc, w) => acc + BigInt(w.amount), 0n);
+      .reduce((acc, w) => acc + BigInt(w.amount), BigInt(0));
 
     const totalFeesPaidMicro = withdrawals
       .filter((w) => w.status === "completed")
-      .reduce((acc) => acc + WITHDRAWAL_FEE, 0n);
+      .reduce((acc) => acc + WITHDRAWAL_FEE, BigInt(0));
 
     const totalCommissions = commissions.reduce(
       (acc, c) => acc + c.commissionAmount,
@@ -93,7 +97,7 @@ export const getUserFullReport = query({
     const earningsBalance = balances.find(
       (b) => b.chainId === 0 && b.tokenSymbol === "USDT",
     );
-    const earningsMicro = earningsBalance ? BigInt(earningsBalance.amount) : 0n;
+    const earningsMicro = earningsBalance ? BigInt(earningsBalance.amount) : BigInt(0);
 
     return {
       user: {

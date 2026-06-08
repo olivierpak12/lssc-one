@@ -62,6 +62,7 @@ http.route({ path: "/run/deposits:listDeposits", method: "OPTIONS", handler: pre
 http.route({ path: "/run/withdrawals:getWithdrawals", method: "OPTIONS", handler: preflightHandler });
 http.route({ path: "/mutation/withdrawals:requestWithdrawal", method: "OPTIONS", handler: preflightHandler });
 http.route({ path: "/action/etherscanActions:syncUserDeposits", method: "OPTIONS", handler: preflightHandler });
+http.route({ path: "/run/reports:getUserFullReport", method: "OPTIONS", handler: preflightHandler });
 http.route({ path: "/run/admin:getStats", method: "OPTIONS", handler: preflightHandler });
 http.route({ path: "/run/admin:getPendingWithdrawals", method: "OPTIONS", handler: preflightHandler });
 http.route({ path: "/run/networks:getActiveNetworks", method: "OPTIONS", handler: preflightHandler });
@@ -498,6 +499,23 @@ http.route({
     const origin = getOrigin(request);
     try {
       const result = await ctx.runAction((api as any).adminActions.processAllPending);
+      return jsonResponse(result, 200, origin);
+    } catch (e: any) {
+      return jsonResponse(e.message, 400, origin);
+    }
+  }),
+});
+
+http.route({
+  path: "/run/reports:getUserFullReport",
+  method: "GET",
+  handler: httpAction(async (ctx, request) => {
+    const origin = getOrigin(request);
+    try {
+      const { searchParams } = new URL(request.url);
+      const email = searchParams.get("email");
+      if (!email) return jsonResponse("Missing email", 400, origin);
+      const result = await ctx.runQuery(api.reports.getUserFullReport, { email });
       return jsonResponse(result, 200, origin);
     } catch (e: any) {
       return jsonResponse(e.message, 400, origin);
