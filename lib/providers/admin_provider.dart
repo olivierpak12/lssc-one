@@ -19,6 +19,12 @@ final pendingWithdrawalsProvider = FutureProvider<List<dynamic>>((ref) async {
   return response.data as List<dynamic>;
 });
 
+final userReportProvider = FutureProvider.family<Map<String, dynamic>, String>((ref, email) async {
+  final apiService = ref.read(apiServiceProvider);
+  final response = await apiService.getUserReport(email);
+  return response.data as Map<String, dynamic>;
+});
+
 class AdminNotifier extends StateNotifier<bool> {
   final Ref ref;
   AdminNotifier(this.ref) : super(false);
