@@ -61,9 +61,9 @@ class ReferralDashboardScreen extends ConsumerWidget {
                 ),
               ),
               AppSpacing.hXxxl,
-              AnimatedEntry(
+              const AnimatedEntry(
                 delay: 280,
-                child: const _ReferralCodeCard(),
+                child: _ReferralCodeCard(),
               ),
               AppSpacing.hXxxl,
             ],
@@ -230,7 +230,7 @@ class _ReferralCodeCard extends ConsumerWidget {
                   Clipboard.setData(ClipboardData(text: value));
                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$label copied!')));
                 },
-                child: Icon(Icons.copy, size: 18, color: AppColors.primary),
+                child: const Icon(Icons.copy, size: 18, color: AppColors.primary),
               ),
             ],
           ),

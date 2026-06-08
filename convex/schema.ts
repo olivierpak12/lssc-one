@@ -52,6 +52,7 @@ export default defineSchema({
     chainId: v.number(),
     tokenSymbol: v.string(),
     amount: v.string(),
+    amountUsd: v.optional(v.number()),
     updatedAt: v.number(),
   })
     .index("by_userId", ["userId"])

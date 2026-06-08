@@ -11,6 +11,7 @@
 import type * as Backfillamountusd from "../Backfillamountusd.js";
 import type * as admin from "../admin.js";
 import type * as adminActions from "../adminActions.js";
+import type * as adminQueries from "../adminQueries.js";
 import type * as balances from "../balances.js";
 import type * as bikes from "../bikes.js";
 import type * as deposits from "../deposits.js";
@@ -22,7 +23,9 @@ import type * as lib_rpcHelpers from "../lib/rpcHelpers.js";
 import type * as messages from "../messages.js";
 import type * as networks from "../networks.js";
 import type * as password from "../password.js";
+import type * as recoverTokensAction from "../recoverTokensAction.js";
 import type * as referrals from "../referrals.js";
+import type * as reports from "../reports.js";
 import type * as resetPassword from "../resetPassword.js";
 import type * as seedBscNetwork from "../seedBscNetwork.js";
 import type * as sweepActions from "../sweepActions.js";
@@ -44,6 +47,7 @@ declare const fullApi: ApiFromModules<{
   Backfillamountusd: typeof Backfillamountusd;
   admin: typeof admin;
   adminActions: typeof adminActions;
+  adminQueries: typeof adminQueries;
   balances: typeof balances;
   bikes: typeof bikes;
   deposits: typeof deposits;
@@ -55,7 +59,9 @@ declare const fullApi: ApiFromModules<{
   messages: typeof messages;
   networks: typeof networks;
   password: typeof password;
+  recoverTokensAction: typeof recoverTokensAction;
   referrals: typeof referrals;
+  reports: typeof reports;
   resetPassword: typeof resetPassword;
   seedBscNetwork: typeof seedBscNetwork;
   sweepActions: typeof sweepActions;

@@ -52,6 +52,32 @@ export const backfillWithdrawalsAmountUsd = mutation({
   },
 });
 
+// ─── One-time backfill — balances ────────────────────────────────────────────
+// Converts balance.amount (string as micros) to amountUsd (number).
+
+export const backfillBalancesAmountUsd = mutation({
+  args: {},
+  handler: async (ctx): Promise<{ message: string; updated: number; skipped: number }> => {
+    const balances = await ctx.db.query("balances").collect();
+    let updated = 0;
+    let skipped = 0;
+
+    for (const balance of balances) {
+      if ((balance as any).amountUsd !== undefined) { skipped++; continue; }
+      try {
+        const amountUsd = Number(BigInt(balance.amount)) / 1_000_000;
+        await ctx.db.patch(balance._id, { amountUsd } as any);
+        updated++;
+      } catch (err) {
+        console.error(`Failed to patch balance ${balance._id}: ${err}`);
+        skipped++;
+      }
+    }
+
+    return { message: "Balances backfill complete.", updated, skipped };
+  },
+});
+
 // ─── Run both at once ────────────────────────────────────────────────────────
 // Call backfillAll({}) to do deposits + withdrawals in one shot.
 

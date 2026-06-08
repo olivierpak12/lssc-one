@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:math';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -12,7 +14,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
 import 'providers/wallet_provider.dart';
 import 'providers/auth_provider.dart';
-import 'providers/admin_provider.dart';
+
 import 'providers/team_provider.dart';
 import 'providers/purchases_provider.dart';
 import 'providers/referral_provider.dart';
@@ -26,6 +28,12 @@ import 'components/app_button.dart';
 import 'components/app_card.dart';
 import 'components/support_chat_button.dart';
 import 'components/notification_bell.dart';
+import 'screens/privacy_screen.dart';
+import 'screens/terms_screen.dart';
+import 'screens/about_screen.dart';
+import 'screens/admin/admin_dashboard_screen.dart';
+import 'screens/admin/user_management_screen.dart';
+import 'screens/admin/pending_withdrawals_screen.dart';
 
 
 void main() {
@@ -65,6 +73,9 @@ final routerProvider = Provider<GoRouter>((ref) {
         final token = state.uri.queryParameters['token'] ?? '';
         return ResetTransactionPasswordScreen(token: token);
       }),
+      GoRoute(path: '/privacy', builder: (context, state) => const PrivacyScreen()),
+      GoRoute(path: '/terms', builder: (context, state) => const TermsScreen()),
+      GoRoute(path: '/about', builder: (context, state) => const AboutScreen()),
       ShellRoute(
         builder: (context, state, child) => MainShell(child: child),
         routes: [
@@ -79,6 +90,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(path: '/settings', builder: (context, state) => const SettingsScreen()),
           GoRoute(path: '/admin', builder: (context, state) => const AdminDashboardScreen()),
           GoRoute(path: '/admin/users', builder: (context, state) => const UserManagementScreen()),
+          GoRoute(path: '/admin/withdrawals', builder: (context, state) => const PendingWithdrawalsScreen()),
           GoRoute(path: '/activity', builder: (context, state) => const ActivityHistoryScreen()),
           GoRoute(path: '/messages', builder: (context, state) => const MessagesScreen()),
         ],
@@ -90,21 +102,17 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       if (!auth.sessionRestored) return null;
 
-      final isLoggingIn = path == '/login';
-      final isRegister = path == '/register';
-      final isVerifying = path == '/verify-email';
-      final isForgotPassword = path == '/forgot-password';
-      final isResetPassword = path == '/reset-password';
-      final isResetTransPassword = path == '/reset-transaction-password';
+      final publicPages = ['/login', '/register', '/privacy', '/terms', '/about', '/forgot-password', '/reset-password', '/reset-transaction-password'];
+      final authPages = ['/login', '/register', '/verify-email', '/forgot-password', '/reset-password', '/reset-transaction-password'];
       final isAdminPage = path.startsWith('/admin');
 
       if (auth.userId == null) {
-        return (isLoggingIn || isRegister || isForgotPassword || isResetPassword || isResetTransPassword) ? null : '/login';
+        return (publicPages.contains(path) || path == '/verify-email') ? null : '/login';
       }
 
       if (isAdminPage && !auth.isAdmin) return '/';
 
-      if (isLoggingIn || isRegister || isVerifying || isForgotPassword || isResetPassword || isResetTransPassword) return '/';
+      if (authPages.contains(path)) return '/';
       
       return null;
     },
@@ -267,7 +275,7 @@ class _EarningsScreenState extends ConsumerState<EarningsScreen>
         });
         ref.invalidate(purchasesProvider);
         ref.invalidate(balanceProvider(auth.userId!));
-        ref.invalidate(withdrawableBalanceProvider(auth.userId!));
+        ref.invalidate(withdrawableBalanceProvider((userId: auth.userId!, token: 'USDT')));
         ref.invalidate(referralStatsProvider);
       } else {
         final errMsg = data is Map ? (data['message'] ?? 'Claim failed') : 'Claim failed';
@@ -302,7 +310,7 @@ class _EarningsScreenState extends ConsumerState<EarningsScreen>
     final referralStatsAsync = ref.watch(referralStatsProvider);
     final auth = ref.watch(authProvider);
     final withdrawableAsync = auth.userId != null
-        ? ref.watch(withdrawableBalanceProvider(auth.userId!))
+        ? ref.watch(withdrawableBalanceProvider((userId: auth.userId!, token: 'USDT')))
         : null;
 
     final purchases = purchasesAsync.asData?.value ?? [];
@@ -2898,6 +2906,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   
   bool _isLogin = true;
   bool _initialized = false;
+  bool _termsAccepted = false;
 
   @override
   void initState() {
@@ -2953,6 +2962,10 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       }
       if (transPass.isEmpty) {
         _showError('Please set a transaction password');
+        return;
+      }
+      if (!_termsAccepted) {
+        _showError('You must agree to the Terms of Service and Privacy Policy');
         return;
       }
 
@@ -3078,8 +3091,48 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                       ),
                       const SizedBox(height: 15),
                       _buildTextField('Invite Code (Optional 5-digit code)', Icons.card_giftcard, _inviteCtrl),
+                      const SizedBox(height: 15),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Checkbox(
+                            value: _termsAccepted,
+                            onChanged: (v) => setState(() => _termsAccepted = v ?? false),
+                            activeColor: AppColors.primary,
+                            checkColor: Colors.white,
+                            side: const BorderSide(color: AppColors.textMuted),
+                          ),
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () => setState(() => _termsAccepted = !_termsAccepted),
+                              child: Padding(
+                                padding: const EdgeInsets.only(top: 12),
+                                child: RichText(
+                                  text: TextSpan(
+                                    style: GoogleFonts.poppins(fontSize: 13, color: AppColors.textSecondary),
+                                    children: [
+                                      const TextSpan(text: 'I agree to the '),
+                                      TextSpan(
+                                        text: 'Terms of Service',
+                                        style: const TextStyle(color: AppColors.primary, decoration: TextDecoration.underline),
+                                        recognizer: TapGestureRecognizer()..onTap = () => context.push('/terms'),
+                                      ),
+                                      const TextSpan(text: ' and '),
+                                      TextSpan(
+                                        text: 'Privacy Policy',
+                                        style: const TextStyle(color: AppColors.primary, decoration: TextDecoration.underline),
+                                        recognizer: TapGestureRecognizer()..onTap = () => context.push('/privacy'),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ],
-                    
+
                     AppSpacing.hXxxl,
                     AppPrimaryButton(
                       label: _isLogin ? 'Access Wallet' : 'Create Account',
@@ -3099,6 +3152,26 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                       child: Text(
                         _isLogin ? "Don't have an account? Register" : "Already have an account? Login",
                       ),
+                    ),
+                    const SizedBox(height: 32),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        TextButton(
+                          onPressed: () => context.push('/privacy'),
+                          child: Text('Privacy Policy', style: GoogleFonts.poppins(fontSize: 12, color: AppColors.textMuted)),
+                        ),
+                        Text(' | ', style: GoogleFonts.poppins(fontSize: 12, color: AppColors.textMuted)),
+                        TextButton(
+                          onPressed: () => context.push('/terms'),
+                          child: Text('Terms of Service', style: GoogleFonts.poppins(fontSize: 12, color: AppColors.textMuted)),
+                        ),
+                        Text(' | ', style: GoogleFonts.poppins(fontSize: 12, color: AppColors.textMuted)),
+                        TextButton(
+                          onPressed: () => context.push('/about'),
+                          child: Text('About', style: GoogleFonts.poppins(fontSize: 12, color: AppColors.textMuted)),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -4030,6 +4103,28 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   ),
                 ),
               ),
+              const SizedBox(height: 32),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextButton(
+                    onPressed: () => context.push('/privacy'),
+                    child: Text('Privacy Policy', style: GoogleFonts.poppins(fontSize: 12, color: AppColors.textMuted)),
+                  ),
+                  Text(' | ', style: GoogleFonts.poppins(fontSize: 12, color: AppColors.textMuted)),
+                  TextButton(
+                    onPressed: () => context.push('/terms'),
+                    child: Text('Terms of Service', style: GoogleFonts.poppins(fontSize: 12, color: AppColors.textMuted)),
+                  ),
+                  Text(' | ', style: GoogleFonts.poppins(fontSize: 12, color: AppColors.textMuted)),
+                  TextButton(
+                    onPressed: () => context.push('/about'),
+                    child: Text('About', style: GoogleFonts.poppins(fontSize: 12, color: AppColors.textMuted)),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
             ],
           ),
         ),
@@ -5291,7 +5386,7 @@ class _WithdrawScreenState extends ConsumerState<WithdrawScreen> {
         final userId = ref.read(authProvider).userId;
         if (userId != null) {
           ref.invalidate(withdrawalsProvider(userId));
-          ref.invalidate(withdrawableBalanceProvider(userId));
+          ref.invalidate(withdrawableBalanceProvider((userId: userId, token: selectedToken)));
         }
       }
     });
@@ -5382,24 +5477,43 @@ class _WithdrawScreenState extends ConsumerState<WithdrawScreen> {
         _amountCtrl.clear();
         // Keep address and password but clear amount
         ref.invalidate(withdrawalsProvider(userId));
-        ref.invalidate(withdrawableBalanceProvider(userId));
+        ref.invalidate(withdrawableBalanceProvider((userId: userId, token: selectedToken)));
         ref.invalidate(activityProvider(userId));
         ref.invalidate(messagesProvider(userId));
         ref.invalidate(unreadCountProvider(userId));
       }
     } catch (e) {
-      String errorMsg = "Withdrawal failed";
+      String errorMsg = "Withdrawal failed. Please try again.";
       if (e is DioException) {
         final data = e.response?.data;
         if (data != null) {
-          errorMsg = data.toString()
-              .replaceAll('"', '')
-              .replaceFirst(RegExp(r'\[CONVEX.*?\]\s*'), '')
-              .replaceFirst('Uncaught Error: ', '')
-              .trim();
+          if (data is Map) {
+            errorMsg = (data['error'] as String?) ?? errorMsg;
+          } else {
+            final raw = data.toString();
+            errorMsg = raw
+                .replaceAll('"', '')
+                .replaceFirst(RegExp(r'\[CONVEX[^\]]*\]\s*'), '')
+                .replaceFirst('Uncaught Error: ', '')
+                .trim();
+          }
         } else {
           errorMsg = e.message ?? "Connection error";
         }
+      }
+      // Log sanitized details; response bodies never printed in production
+      if (kReleaseMode) {
+        print("Withdrawal error (${e.runtimeType})");
+      } else {
+        print("=== WITHDRAWAL ERROR ===");
+        print("Type: ${e.runtimeType}");
+        if (e is DioException) {
+          print("Status: ${e.response?.statusCode}");
+          print("Message: ${e.message}");
+        } else {
+          print("Error: $e");
+        }
+        print("========================");
       }
       if (mounted) _showError(errorMsg);
     } finally {
@@ -5451,7 +5565,7 @@ class _WithdrawScreenState extends ConsumerState<WithdrawScreen> {
   Widget build(BuildContext context) {
     final auth = ref.watch(authProvider);
     final userId = auth.userId ?? "";
-    final balanceAsync = ref.watch(withdrawableBalanceProvider(userId));
+    final balanceAsync = ref.watch(withdrawableBalanceProvider((userId: userId, token: selectedToken)));
     final withdrawalsAsync = ref.watch(withdrawalsProvider(userId));
     final networksAsync = ref.watch(networksProvider);
 
@@ -6053,7 +6167,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final email = auth.email ?? 'Not logged in';
     final initials = email.isNotEmpty ? email[0].toUpperCase() : '?';
     final userId = auth.userId ?? "";
-    final withdrawableAsync = ref.watch(withdrawableBalanceProvider(userId));
+    final withdrawableAsync = ref.watch(withdrawableBalanceProvider((userId: userId, token: 'USDT')));
 
     double withdrawableBalance = 0;
     if (withdrawableAsync.asData?.value != null) {
@@ -6365,243 +6479,4 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 }
 
 // --- Admin Dashboard ---
-class AdminDashboardScreen extends ConsumerWidget {
-  const AdminDashboardScreen({super.key});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final statsAsync = ref.watch(adminStatsProvider);
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('ADMIN CONSOLE'),
-        actions: const [NotificationBell()],
-      ),
-      body: statsAsync.when(
-        data: (stats) => Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            children: [
-              Expanded(
-                child: GridView.count(
-                  crossAxisCount: 2,
-                  mainAxisSpacing: 15,
-                  crossAxisSpacing: 15,
-                  children: [
-                    _buildStatCard('Total Deposits', '${stats['depositCount']}', AppColors.success),
-                    _buildStatCard('Total Volume', '\$${(stats['totalVolume'] / 1000000).toStringAsFixed(2)}', AppColors.warning),
-                    _buildStatCard('Pending Sweeps', '${stats['pendingSweeps']}', AppColors.info),
-                    _buildStatCard('Pending Withdrawals', '${stats['pendingWithdrawals']}', AppColors.warning),
-                  ],
-                ),
-              ),
-              AppSpacing.hXl,
-              AppPressable(
-                onTap: () => context.push('/admin/users'),
-                child: AppCard(
-                  borderRadius: 15,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  child: Row(
-                    children: [
-                      Icon(Icons.people_alt_outlined, color: AppColors.success),
-                      AppSpacing.wMd,
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('User Management', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
-                            Text('View users and change roles', style: GoogleFonts.poppins(fontSize: 12, color: AppColors.textMuted)),
-                          ],
-                        ),
-                      ),
-                      Icon(Icons.arrow_forward_ios, size: 16, color: AppColors.textMuted),
-                    ],
-                  ),
-                ),
-              ),
-              AppSpacing.hMd,
-              AppPressable(
-                onTap: () => context.push('/admin/withdrawals'),
-                child: AppCard(
-                  borderRadius: 15,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  child: Row(
-                    children: [
-                      Icon(Icons.outbox_outlined, color: AppColors.warning),
-                      AppSpacing.wMd,
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('Withdrawal Management', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
-                            Text('Process pending requests', style: GoogleFonts.poppins(fontSize: 12, color: AppColors.textMuted)),
-                          ],
-                        ),
-                      ),
-                      Icon(Icons.arrow_forward_ios, size: 16, color: AppColors.textMuted),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, s) => Center(child: Text('Error loading stats: $e')),
-      ),
-    );
-  }
-
-  Widget _buildStatCard(String title, String value, Color color) {
-    return AppCard(
-      padding: const EdgeInsets.all(15),
-      borderRadius: 15,
-      borderColor: color.withValues(alpha: 0.3),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(title, textAlign: TextAlign.center, style: GoogleFonts.poppins(fontSize: 12, color: AppColors.textTertiary)),
-          AppSpacing.hMd,
-          Text(value, style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.bold, color: color)),
-        ],
-      ),
-    );
-  }
-}
-
-class UserManagementScreen extends ConsumerWidget {
-  const UserManagementScreen({super.key});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final usersAsync = ref.watch(usersProvider);
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('MANAGE USERS'),
-        actions: const [NotificationBell()],
-      ),
-      body: usersAsync.when(
-        data: (users) => ListView.builder(
-          padding: const EdgeInsets.all(16),
-          itemCount: users.length,
-          itemBuilder: (context, i) {
-            final user = users[i];
-            final String currentRole = user['role'] ?? 'user';
-
-            return AppCard(
-              margin: const EdgeInsets.only(bottom: 12),
-              borderRadius: 15,
-              padding: EdgeInsets.zero,
-              child: ListTile(
-                title: Text(user['email'], style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
-                subtitle: Text('Role: ${currentRole.toUpperCase()}', style: GoogleFonts.poppins(color: currentRole == 'admin' ? AppColors.success : AppColors.textTertiary)),
-                trailing: DropdownButton<String>(
-                  value: currentRole,
-                  underline: const SizedBox(),
-                  dropdownColor: AppColors.surfaceElevated,
-                  items: ['user', 'admin'].map((role) {
-                    return DropdownMenuItem(
-                      value: role, 
-                      child: Text(role.toUpperCase(), style: GoogleFonts.poppins(fontSize: 12, color: AppColors.primary))
-                    );
-                  }).toList(),
-                  onChanged: (newRole) async {
-                    if (newRole != null && newRole != currentRole) {
-                      await ref.read(adminNotifierProvider.notifier).updateUserRole(user['_id'], newRole);
-                      if (user['_id'] == ref.read(authProvider).userId) {
-                        await ref.read(authProvider.notifier).refreshUser();
-                      }
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Updated ${user['email']} to $newRole')));
-                      }
-                    }
-                  },
-                ),
-              ),
-            );
-          },
-        ),
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, s) => Center(child: Text('Error: $e')),
-      ),
-    );
-  }
-}
-
-class PendingWithdrawalsScreen extends ConsumerStatefulWidget {
-  const PendingWithdrawalsScreen({super.key});
-  @override
-  ConsumerState<PendingWithdrawalsScreen> createState() => _PendingWithdrawalsScreenState();
-}
-
-class _PendingWithdrawalsScreenState extends ConsumerState<PendingWithdrawalsScreen> {
-  bool _isProcessingAll = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final pendingAsync = ref.watch(pendingWithdrawalsProvider);
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('PENDING WITHDRAWALS'),
-        actions: [
-          const NotificationBell(),
-          if (pendingAsync.hasValue && pendingAsync.value!.isNotEmpty)
-            AppIconButton(
-              icon: _isProcessingAll ? Icons.hourglass_empty : Icons.bolt,
-              color: AppColors.warning,
-              badge: _isProcessingAll ? null : null,
-              onPressed: _isProcessingAll ? null : () async {
-                setState(() => _isProcessingAll = true);
-                await ref.read(adminNotifierProvider.notifier).processAllWithdrawals();
-                if (mounted) {
-                  setState(() => _isProcessingAll = false);
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Processing started for all requests')));
-                }
-              },
-            ),
-        ],
-      ),
-      body: pendingAsync.when(
-        data: (list) {
-          if (list.isEmpty) {
-            return Center(child: Text('No pending withdrawals', style: GoogleFonts.poppins(color: AppColors.textMuted)));
-          }
-          return ListView.builder(
-            itemCount: list.length,
-            padding: const EdgeInsets.all(16),
-            itemBuilder: (context, i) {
-              final w = list[i];
-              double amount = 0;
-              try { amount = double.parse(w['amount'].toString()) / 1000000; } catch (_) {}
-              
-              return AppCard(
-                margin: const EdgeInsets.only(bottom: 12),
-                borderRadius: 15,
-                padding: EdgeInsets.zero,
-                child: ListTile(
-                  title: Text('${amount.toStringAsFixed(2)} ${w['token']}', style: GoogleFonts.poppins(fontWeight: FontWeight.bold, color: AppColors.success)),
-                  subtitle: Text('To: ${w['toAddress'].substring(0, 10)}...\nNet: ${w['network']}', style: GoogleFonts.poppins(fontSize: 12, color: AppColors.textTertiary)),
-                  trailing: AppPrimaryButton(
-                    label: 'PROCESS',
-                    onPressed: () async {
-                      await ref.read(adminNotifierProvider.notifier).processWithdrawal(w['_id']);
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Withdrawal processing...')));
-                      }
-                    },
-                    height: 40,
-                    fullWidth: false,
-                  ),
-                ),
-              );
-            },
-          );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, s) => Center(child: Text('Error: $e')),
-      ),
-    );
-  }
-}
+// Admin screens moved to screens/admin/
