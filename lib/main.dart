@@ -209,7 +209,7 @@ class MainShell extends StatelessWidget {
       body: Stack(
         children: [
           child,
-          const SupportChatButton(),
+          const SupportChatButton(bottomOffset: 20),
         ],
       ),
       bottomNavigationBar: Container(
