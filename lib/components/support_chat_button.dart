@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../theme/app_animations.dart';
 
-const String _supportUrl = 'https://t.me/Lssc1support';
+const String _supportUrl = 'https://t.me/+GQf04WTt82o4ZmI8';
 
 class SupportChatButton extends StatefulWidget {
   const SupportChatButton({super.key, this.bottomOffset});
