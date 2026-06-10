@@ -99,6 +99,18 @@ class ApiService {
     return await _dio.post('/action/withdrawalActions:processAllPending');
   }
 
+  Future<Response> getPendingAdminWithdrawals() async {
+    return await _dio.get('/run/admin:getPendingAdminWithdrawals');
+  }
+
+  Future<Response> getWithdrawalsDisabled() async {
+    return await _dio.get('/run/admin:getWithdrawalsDisabled');
+  }
+
+  Future<Response> setWithdrawalsDisabled(bool disabled) async {
+    return await _dio.post('/mutation/admin:setWithdrawalsDisabled', data: {'disabled': disabled});
+  }
+
   Future<Response> getUserReport(String email) async {
     return await _dio.get('/run/reports:getUserFullReport', queryParameters: {'email': email});
   }

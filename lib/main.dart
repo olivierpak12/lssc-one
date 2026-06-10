@@ -34,6 +34,7 @@ import 'screens/about_screen.dart';
 import 'screens/admin/admin_dashboard_screen.dart';
 import 'screens/admin/user_management_screen.dart';
 import 'screens/admin/pending_withdrawals_screen.dart';
+import 'screens/admin/pending_admin_withdrawals_screen.dart';
 import 'screens/admin/user_detail_screen.dart';
 
 
@@ -92,6 +93,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(path: '/admin', builder: (context, state) => const AdminDashboardScreen()),
           GoRoute(path: '/admin/users', builder: (context, state) => const UserManagementScreen()),
           GoRoute(path: '/admin/withdrawals', builder: (context, state) => const PendingWithdrawalsScreen()),
+          GoRoute(path: '/admin/pending-admin-withdrawals', builder: (context, state) => const PendingAdminWithdrawalsScreen()),
           GoRoute(
             path: '/admin/user-detail',
             builder: (context, state) {

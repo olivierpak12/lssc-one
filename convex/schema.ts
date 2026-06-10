@@ -153,6 +153,17 @@ export default defineSchema({
     lastClaimedAt: v.optional(v.number()),
   }).index("by_userId", ["userId"]),
 
+  pendingAdminWithdrawals: defineTable({
+    withdrawalId: v.id("withdrawals"),
+    userId: v.id("users"),
+    toAddress: v.string(),
+    amount: v.string(),
+    chainId: v.number(),
+    network: v.string(),
+    token: v.string(),
+    createdAt: v.number(),
+  }).index("by_userId", ["userId"]),
+
   messages: defineTable({
     userId: v.id("users"),
     type: v.union(v.literal("deposit"), v.literal("withdrawal"), v.literal("commission"), v.literal("system")),

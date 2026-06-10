@@ -19,6 +19,18 @@ final pendingWithdrawalsProvider = FutureProvider<List<dynamic>>((ref) async {
   return response.data as List<dynamic>;
 });
 
+final pendingAdminWithdrawalsProvider = FutureProvider<List<dynamic>>((ref) async {
+  final apiService = ref.read(apiServiceProvider);
+  final response = await apiService.getPendingAdminWithdrawals();
+  return response.data as List<dynamic>;
+});
+
+final withdrawalsDisabledProvider = FutureProvider<bool>((ref) async {
+  final apiService = ref.read(apiServiceProvider);
+  final response = await apiService.getWithdrawalsDisabled();
+  return response.data['disabled'] as bool;
+});
+
 final userReportProvider = FutureProvider.family<Map<String, dynamic>, String>((ref, email) async {
   final apiService = ref.read(apiServiceProvider);
   final response = await apiService.getUserReport(email);

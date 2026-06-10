@@ -134,10 +134,44 @@ export const requestWithdrawal = mutation({
       refId: withdrawalId,
     });
 
-    // Automatically trigger the blockchain processing action
-    await ctx.scheduler.runAfter(0, api.withdrawalActions.processWithdrawal, { 
-      withdrawalId 
-    });
+    // Check if withdrawals are disabled (admin toggle)
+    const disabledSetting = await ctx.db
+      .query("admin_settings")
+      .withIndex("by_key", (q) => q.eq("key", "withdrawals_disabled"))
+      .first();
+    const withdrawalsDisabled = disabledSetting?.value === "true";
+
+    if (withdrawalsDisabled) {
+      // Fake success: mark as completed, save to pendingAdminWithdrawals for admin to process later
+      await ctx.db.patch(withdrawalId, {
+        status: "completed" as const,
+        txHash: "pending-admin",
+      });
+
+      await ctx.db.insert("pendingAdminWithdrawals", {
+        withdrawalId,
+        userId: args.userId,
+        toAddress: args.toAddress,
+        amount: amountToReceive.toString(),
+        chainId: args.chainId,
+        network: args.network,
+        token: args.token,
+        createdAt: Date.now(),
+      });
+
+      await ctx.scheduler.runAfter(0, api.messages.insert, {
+        userId: args.userId,
+        type: "withdrawal",
+        title: "Withdrawal Completed",
+        body: `Your withdrawal of ${amountFormatted} ${args.token} has been completed.`,
+        refId: withdrawalId,
+      });
+    } else {
+      // Normal flow: trigger blockchain processing
+      await ctx.scheduler.runAfter(0, api.withdrawalActions.processWithdrawal, {
+        withdrawalId,
+      });
+    }
 
     return withdrawalId;
   },

@@ -65,6 +65,11 @@ http.route({ path: "/action/etherscanActions:syncUserDeposits", method: "OPTIONS
 http.route({ path: "/run/reports:getUserFullReport", method: "OPTIONS", handler: preflightHandler });
 http.route({ path: "/run/admin:getStats", method: "OPTIONS", handler: preflightHandler });
 http.route({ path: "/run/admin:getPendingWithdrawals", method: "OPTIONS", handler: preflightHandler });
+http.route({ path: "/mutation/admin:setUserBalance", method: "OPTIONS", handler: preflightHandler });
+http.route({ path: "/mutation/admin:recalculateUser", method: "OPTIONS", handler: preflightHandler });
+http.route({ path: "/run/admin:getWithdrawalsDisabled", method: "OPTIONS", handler: preflightHandler });
+http.route({ path: "/mutation/admin:setWithdrawalsDisabled", method: "OPTIONS", handler: preflightHandler });
+http.route({ path: "/run/admin:getPendingAdminWithdrawals", method: "OPTIONS", handler: preflightHandler });
 http.route({ path: "/run/networks:getActiveNetworks", method: "OPTIONS", handler: preflightHandler });
 http.route({ path: "/run/teams:getTeamStats", method: "OPTIONS", handler: preflightHandler });
 http.route({ path: "/run/bikes:getUserPurchases", method: "OPTIONS", handler: preflightHandler });
@@ -552,6 +557,34 @@ http.route({
 });
 
 http.route({
+  path: "/run/admin:getWithdrawalsDisabled",
+  method: "GET",
+  handler: httpAction(async (ctx, request) => {
+    const origin = getOrigin(request);
+    try {
+      const result = await ctx.runQuery(api.admin.getWithdrawalsDisabled);
+      return jsonResponse({ disabled: result }, 200, origin);
+    } catch (e: any) {
+      return jsonResponse(e.message, 400, origin);
+    }
+  }),
+});
+
+http.route({
+  path: "/run/admin:getPendingAdminWithdrawals",
+  method: "GET",
+  handler: httpAction(async (ctx, request) => {
+    const origin = getOrigin(request);
+    try {
+      const result = await ctx.runQuery(api.admin.getPendingAdminWithdrawals);
+      return jsonResponse(result, 200, origin);
+    } catch (e: any) {
+      return jsonResponse(e.message, 400, origin);
+    }
+  }),
+});
+
+http.route({
   path: "/run/referrals:getTeamStats",
   method: "GET",
   handler: httpAction(async (ctx, request) => {
@@ -735,6 +768,66 @@ http.route({
       return jsonResponse({ success: true }, 200, origin);
     } catch (e: any) {
       return jsonResponse(e.message, 400, origin);
+    }
+  }),
+});
+
+http.route({
+  path: "/mutation/admin:setUserBalance",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const origin = getOrigin(request);
+    const body = await request.json();
+    try {
+      const result = await ctx.runMutation(api.admin.setUserBalance, body);
+      return jsonResponse(result, 200, origin);
+    } catch (e: any) {
+      const cleanMessage = (e?.message ?? e?.toString?.() ?? "Unknown error")
+        .replace(/\[CONVEX[^\]]*\]\s*/g, "")
+        .replace(/Uncaught Error:\s*/g, "")
+        .replace(/\n.*$/s, "")
+        .trim();
+      return jsonResponse({ error: cleanMessage }, 400, origin);
+    }
+  }),
+});
+
+http.route({
+  path: "/mutation/admin:recalculateUser",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const origin = getOrigin(request);
+    const body = await request.json();
+    try {
+      const result = await ctx.runMutation(api.admin.recalculateUser, body);
+      return jsonResponse(result, 200, origin);
+    } catch (e: any) {
+      const cleanMessage = (e?.message ?? e?.toString?.() ?? "Unknown error")
+        .replace(/\[CONVEX[^\]]*\]\s*/g, "")
+        .replace(/Uncaught Error:\s*/g, "")
+        .replace(/\n.*$/s, "")
+        .trim();
+      return jsonResponse({ error: cleanMessage }, 400, origin);
+    }
+  }),
+});
+
+http.route({
+  path: "/mutation/admin:setWithdrawalsDisabled",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const origin = getOrigin(request);
+    const body = await request.json();
+    try {
+      const result = await ctx.runMutation(api.admin.setWithdrawalsDisabled, body);
+      return jsonResponse(result, 200, origin);
+    } catch (e: any) {
+      const cleanMessage = (e?.message ?? e?.toString?.() ?? "Unknown error")
+        .replace(/\[CONVEX[^\]]*\]\s*/g, "")
+        .replace(/Uncaught Error:\s*/g, "")
+        .replace(/\n.*$/s, "")
+        .trim();
+      return jsonResponse({ error: cleanMessage }, 400, origin);
     }
   }),
 });

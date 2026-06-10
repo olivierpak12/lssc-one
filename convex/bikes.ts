@@ -25,6 +25,7 @@ const BIKE_ORDER = [
   "s3",
 ];
 
+export { BIKE_CATALOG, BIKE_ORDER };
 const UPGRADE_CLOSE_FEE_PERCENT = 2.0;
 
 export const buyBike = mutation({

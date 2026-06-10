@@ -479,6 +479,67 @@ class _ManagementCards extends StatelessWidget {
             ),
           ),
         ),
+        const SizedBox(height: 10),
+        AnimatedEntry(
+          delay: 300,
+          child: AppPressable(
+            onTap: () => context.push('/admin/pending-admin-withdrawals'),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                color: AppColors.surfaceCardAlt,
+                border: Border.all(color: AppColors.borderSubtle),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: AppColors.overlayBlue,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.pending_actions_rounded,
+                      size: 22,
+                      color: AppColors.accentBlue,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Pending Admin Withdrawals',
+                          style: GoogleFonts.poppins(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 15,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Withdrawals held for manual processing',
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            color: AppColors.textTertiary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(
+                    Icons.chevron_right_rounded,
+                    size: 20,
+                    color: AppColors.textMuted,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
       ],
     );
   }
