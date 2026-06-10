@@ -113,7 +113,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (!auth.sessionRestored) return null;
 
       final publicPages = ['/login', '/register', '/privacy', '/terms', '/about', '/forgot-password', '/reset-password', '/reset-transaction-password'];
-      final authPages = ['/login', '/register', '/verify-email', '/forgot-password', '/reset-password', '/reset-transaction-password'];
+      final authPages = ['/login', '/register', '/verify-email', '/forgot-password', '/reset-password'];
       final isAdminPage = path.startsWith('/admin');
 
       if (auth.userId == null) {
