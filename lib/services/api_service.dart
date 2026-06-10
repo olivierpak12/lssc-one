@@ -107,6 +107,12 @@ class ApiService {
     return await _dio.get('/run/admin:getWithdrawalsDisabled');
   }
 
+  Future<Response> processPendingAdminWithdrawal(String pendingAdminWithdrawalId) async {
+    return await _dio.post('/action/adminActions:processPendingAdminWithdrawal', data: {
+      'pendingAdminWithdrawalId': pendingAdminWithdrawalId,
+    });
+  }
+
   Future<Response> setWithdrawalsDisabled(bool disabled) async {
     return await _dio.post('/mutation/admin:setWithdrawalsDisabled', data: {'disabled': disabled});
   }

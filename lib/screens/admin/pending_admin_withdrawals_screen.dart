@@ -7,11 +7,18 @@ import '../../components/app_card.dart';
 import '../../components/app_button.dart';
 import '../../components/notification_bell.dart';
 
-class PendingAdminWithdrawalsScreen extends ConsumerWidget {
+class PendingAdminWithdrawalsScreen extends ConsumerStatefulWidget {
   const PendingAdminWithdrawalsScreen({super.key});
+  @override
+  ConsumerState<PendingAdminWithdrawalsScreen> createState() => _PendingAdminWithdrawalsScreenState();
+}
+
+class _PendingAdminWithdrawalsScreenState extends ConsumerState<PendingAdminWithdrawalsScreen> {
+  bool _isProcessingAll = false;
+  final Set<String> _processingIds = {};
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final pendingAsync = ref.watch(pendingAdminWithdrawalsProvider);
 
     return Scaffold(
@@ -24,7 +31,53 @@ class PendingAdminWithdrawalsScreen extends ConsumerWidget {
             letterSpacing: -0.5,
           ),
         ),
-        actions: const [NotificationBell()],
+        actions: [
+          if (pendingAsync.hasValue && pendingAsync.value!.isNotEmpty)
+            AppPressable(
+              onTap: (_isProcessingAll || _processingIds.isNotEmpty) ? null : _processAll,
+              child: Container(
+                margin: const EdgeInsets.only(right: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(10),
+                  color: _isProcessingAll
+                      ? AppColors.textMuted.withValues(alpha: 0.2)
+                      : AppColors.overlayBlue,
+                  border: Border.all(
+                    color: _isProcessingAll
+                        ? AppColors.textMuted.withValues(alpha: 0.1)
+                        : AppColors.accentBlue.withValues(alpha: 0.2),
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (_isProcessingAll)
+                      const SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 1.5,
+                          color: AppColors.accentBlue,
+                        ),
+                      )
+                    else
+                      const Icon(Icons.bolt, size: 16, color: AppColors.accentBlue),
+                    const SizedBox(width: 6),
+                    Text(
+                      _isProcessingAll ? 'Processing...' : 'Process All',
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: _isProcessingAll ? AppColors.textMuted : AppColors.accentBlue,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          const NotificationBell(),
+        ],
       ),
       body: pendingAsync.when(
         data: (list) {
@@ -63,10 +116,14 @@ class PendingAdminWithdrawalsScreen extends ConsumerWidget {
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
               itemBuilder: (context, i) {
                 final w = list[i];
+                final id = w['_id']?.toString() ?? '';
+                final isProcessing = _processingIds.contains(id);
                 return _PendingWithdrawalCard(
                   withdrawal: w,
                   index: i,
+                  isProcessing: isProcessing,
                   onTap: () => _showWithdrawalDetails(context, w),
+                  onProcess: isProcessing ? null : () => _processSingle(id),
                 );
               },
             ),
@@ -107,6 +164,143 @@ class PendingAdminWithdrawalsScreen extends ConsumerWidget {
     );
   }
 
+  Future<void> _processSingle(String id) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1E1E1E),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(color: AppColors.accentBlue.withValues(alpha: 0.3)),
+        ),
+        title: Row(
+          children: [
+            const Icon(Icons.info_outline, size: 22, color: AppColors.accentBlue),
+            const SizedBox(width: 10),
+            Text(
+              'Process Withdrawal',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 16, color: Colors.white),
+            ),
+          ],
+        ),
+        content: Text(
+          'Send this withdrawal on-chain? This will use real gas fees.',
+          style: GoogleFonts.poppins(fontSize: 13, color: AppColors.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text('Cancel', style: GoogleFonts.poppins(color: AppColors.textMuted)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text('Process', style: GoogleFonts.poppins(color: AppColors.accentBlue, fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    setState(() => _processingIds.add(id));
+    try {
+      final result = await ref.read(adminNotifierProvider.notifier).processPendingAdminWithdrawal(id);
+      if (mounted) {
+        final success = result['success'] == true;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message']?.toString() ?? (success ? 'Processed' : 'Failed')),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: success ? const Color(0xFF1B5E20) : const Color(0xFFB71C1C),
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: const Color(0xFFB71C1C),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _processingIds.remove(id));
+      }
+    }
+  }
+
+  Future<void> _processAll() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1E1E1E),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(color: AppColors.accentBlue.withValues(alpha: 0.3)),
+        ),
+        title: Row(
+          children: [
+            const Icon(Icons.warning_amber_rounded, size: 22, color: AppColors.warning),
+            const SizedBox(width: 10),
+            Text(
+              'Process All?',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 16, color: Colors.white),
+            ),
+          ],
+        ),
+        content: Text(
+          'Process all pending admin withdrawals on-chain? This will use real gas fees.',
+          style: GoogleFonts.poppins(fontSize: 13, color: AppColors.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text('Cancel', style: GoogleFonts.poppins(color: AppColors.textMuted)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text('Process All', style: GoogleFonts.poppins(color: AppColors.warning, fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    final list = ref.read(pendingAdminWithdrawalsProvider).valueOrNull ?? [];
+    setState(() => _isProcessingAll = true);
+
+    int successCount = 0;
+    int failCount = 0;
+    for (final w in list) {
+      final id = w['_id']?.toString() ?? '';
+      if (id.isEmpty) continue;
+      try {
+        final result = await ref.read(adminNotifierProvider.notifier).processPendingAdminWithdrawal(id);
+        if (result['success'] == true) {
+          successCount++;
+        } else {
+          failCount++;
+        }
+      } catch (_) {
+        failCount++;
+      }
+    }
+
+    if (mounted) {
+      setState(() => _isProcessingAll = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Processed $successCount successfully, $failCount failed.'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: failCount > 0 ? const Color(0xFFB71C1C) : const Color(0xFF1B5E20),
+        ),
+      );
+    }
+  }
+
   void _showWithdrawalDetails(BuildContext context, dynamic w) {
     final amount = () {
       try {
@@ -117,11 +311,13 @@ class PendingAdminWithdrawalsScreen extends ConsumerWidget {
     }();
 
     final token = w['token']?.toString() ?? 'USDT';
-    final toAddress = w['toAddress']?.toString() ?? '';
+    final amountUsd = w['amountUsd'];
     final network = w['network']?.toString() ?? 'Unknown';
+    final toAddress = w['toAddress']?.toString() ?? '';
     final chainId = w['chainId'];
     final userId = w['userId']?.toString() ?? '';
     final withdrawalId = w['withdrawalId']?.toString() ?? '';
+    final id = w['_id']?.toString() ?? '';
     final createdAt = w['createdAt'];
     final date = createdAt != null
         ? DateTime.fromMillisecondsSinceEpoch(createdAt as int)
@@ -175,7 +371,7 @@ class PendingAdminWithdrawalsScreen extends ConsumerWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _detailRow('Amount', '${amount.toStringAsFixed(2)} $token'),
+              _detailRow('Amount', '${amount.toStringAsFixed(2)} $token${amountUsd != null ? ' (\$${(amountUsd as num).toStringAsFixed(2)})' : ''}'),
               const SizedBox(height: 10),
               _detailRow('Network', network),
               const SizedBox(height: 10),
@@ -196,9 +392,21 @@ class PendingAdminWithdrawalsScreen extends ConsumerWidget {
           SizedBox(
             width: double.infinity,
             child: AppPrimaryButton(
+              label: 'Process Now',
+              icon: Icons.send,
+              onPressed: () {
+                Navigator.of(ctx).pop();
+                _processSingle(id);
+              },
+              height: 44,
+            ),
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            child: AppOutlineButton(
               label: 'Close',
               onPressed: () => Navigator.of(ctx).pop(),
-              height: 44,
             ),
           ),
         ],
@@ -238,12 +446,16 @@ class PendingAdminWithdrawalsScreen extends ConsumerWidget {
 class _PendingWithdrawalCard extends StatelessWidget {
   final dynamic withdrawal;
   final int index;
+  final bool isProcessing;
   final VoidCallback onTap;
+  final VoidCallback? onProcess;
 
   const _PendingWithdrawalCard({
     required this.withdrawal,
     required this.index,
+    required this.isProcessing,
     required this.onTap,
+    this.onProcess,
   });
 
   @override
@@ -267,35 +479,35 @@ class _PendingWithdrawalCard extends StatelessWidget {
 
     return AnimatedEntry(
       delay: index * 40,
-      child: AppPressable(
-        onTap: onTap,
-        child: Container(
-          margin: const EdgeInsets.only(bottom: 10),
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            color: AppColors.surfaceCardAlt,
-            border: Border.all(color: AppColors.borderSubtle),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppColors.overlayBlue,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(
-                      Icons.pending_actions_rounded,
-                      size: 16,
-                      color: AppColors.accentBlue,
-                    ),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          color: AppColors.surfaceCardAlt,
+          border: Border.all(color: AppColors.borderSubtle),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.overlayBlue,
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
+                  child: const Icon(
+                    Icons.pending_actions_rounded,
+                    size: 16,
+                    color: AppColors.accentBlue,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: onTap,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -307,26 +519,72 @@ class _PendingWithdrawalCard extends StatelessWidget {
                             color: Colors.white,
                           ),
                         ),
-                        if (timeAgo.isNotEmpty)
-                          Text(
-                            timeAgo,
-                            style: GoogleFonts.poppins(
-                              fontSize: 11,
-                              color: AppColors.textMuted,
-                            ),
-                          ),
+                        Row(
+                          children: [
+                            if (timeAgo.isNotEmpty)
+                              Text(
+                                timeAgo,
+                                style: GoogleFonts.poppins(
+                                  fontSize: 11,
+                                  color: AppColors.textMuted,
+                                ),
+                              ),
+                            if (withdrawal['amountUsd'] != null) ...[
+                              const SizedBox(width: 8),
+                              Text(
+                                '\$${(withdrawal['amountUsd'] as num).toStringAsFixed(2)}',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 11,
+                                  color: AppColors.success,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
                       ],
                     ),
                   ),
-                  const Icon(
-                    Icons.chevron_right_rounded,
-                    size: 20,
-                    color: AppColors.textMuted,
+                ),
+                SizedBox(
+                  height: 36,
+                  child: AppPressable(
+                    onTap: onProcess,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(10),
+                        color: isProcessing
+                            ? AppColors.textMuted.withValues(alpha: 0.2)
+                            : AppColors.accentBlue,
+                      ),
+                      alignment: Alignment.center,
+                      child: isProcessing
+                          ? const SizedBox(
+                              width: 14,
+                              height: 14,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 1.5,
+                                color: AppColors.textMuted,
+                              ),
+                            )
+                          : Text(
+                              'Process',
+                              style: GoogleFonts.poppins(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.black,
+                              ),
+                            ),
+                    ),
                   ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Container(
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            GestureDetector(
+              onTap: onTap,
+              child: Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
                   color: AppColors.surface,
@@ -341,8 +599,8 @@ class _PendingWithdrawalCard extends StatelessWidget {
                   ],
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

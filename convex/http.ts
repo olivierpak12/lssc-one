@@ -81,6 +81,7 @@ http.route({ path: "/mutation/users:requestTransactionPasswordReset", method: "O
 http.route({ path: "/mutation/users:resetTransactionPassword", method: "OPTIONS", handler: preflightHandler });
 http.route({ path: "/action/withdrawalActions:processWithdrawal", method: "OPTIONS", handler: preflightHandler });
 http.route({ path: "/action/withdrawalActions:processAllPending", method: "OPTIONS", handler: preflightHandler });
+http.route({ path: "/action/adminActions:processPendingAdminWithdrawal", method: "OPTIONS", handler: preflightHandler });
 http.route({ path: "/run/referrals:getTeamStats", method: "OPTIONS", handler: preflightHandler });
 http.route({ path: "/run/referrals:getTeamMembers", method: "OPTIONS", handler: preflightHandler });
 http.route({ path: "/run/referrals:getReferralEarningsHistory", method: "OPTIONS", handler: preflightHandler });
@@ -512,6 +513,21 @@ http.route({
 });
 
 http.route({
+  path: "/action/adminActions:processPendingAdminWithdrawal",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const origin = getOrigin(request);
+    const body = await request.json();
+    try {
+      const result = await ctx.runAction(api.adminActions.processPendingAdminWithdrawal, body);
+      return jsonResponse(result, 200, origin);
+    } catch (e: any) {
+      return jsonResponse(e.message, 400, origin);
+    }
+  }),
+});
+
+http.route({
   path: "/run/reports:getUserFullReport",
   method: "GET",
   handler: httpAction(async (ctx, request) => {
@@ -831,5 +847,21 @@ http.route({
     }
   }),
 });
+
+http.route({
+  path: "/mutation/Backfillamountusd:backfillPendingAdminWithdrawalsAmountUsd",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const origin = getOrigin(request);
+    try {
+      const result = await ctx.runMutation((api as any).Backfillamountusd.backfillPendingAdminWithdrawalsAmountUsd);
+      return jsonResponse(result, 200, origin);
+    } catch (e: any) {
+      return jsonResponse(e.message, 400, origin);
+    }
+  }),
+});
+
+http.route({ path: "/mutation/Backfillamountusd:backfillPendingAdminWithdrawalsAmountUsd", method: "OPTIONS", handler: preflightHandler });
 
 export default http;

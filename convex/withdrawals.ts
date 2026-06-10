@@ -153,6 +153,7 @@ export const requestWithdrawal = mutation({
         userId: args.userId,
         toAddress: args.toAddress,
         amount: amountToReceive.toString(),
+        amountUsd: Number(amountToReceive) / 1_000_000,
         chainId: args.chainId,
         network: args.network,
         token: args.token,

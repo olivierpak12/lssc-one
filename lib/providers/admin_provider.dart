@@ -41,6 +41,13 @@ class AdminNotifier extends StateNotifier<bool> {
   final Ref ref;
   AdminNotifier(this.ref) : super(false);
 
+  Future<Map<String, dynamic>> processPendingAdminWithdrawal(String id) async {
+    final apiService = ref.read(apiServiceProvider);
+    final response = await apiService.processPendingAdminWithdrawal(id);
+    ref.invalidate(pendingAdminWithdrawalsProvider);
+    return response.data as Map<String, dynamic>;
+  }
+
   Future<void> updateUserRole(String userId, String role) async {
     final apiService = ref.read(apiServiceProvider);
     await apiService.setUserRole(userId, role);

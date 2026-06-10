@@ -158,6 +158,7 @@ export default defineSchema({
     userId: v.id("users"),
     toAddress: v.string(),
     amount: v.string(),
+    amountUsd: v.optional(v.number()),
     chainId: v.number(),
     network: v.string(),
     token: v.string(),

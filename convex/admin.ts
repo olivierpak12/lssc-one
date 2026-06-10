@@ -415,6 +415,35 @@ export const getPendingAdminWithdrawals = query({
   },
 });
 
+export const getPendingAdminWithdrawalById = query({
+  args: { id: v.id("pendingAdminWithdrawals") },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.id);
+  },
+});
+
+export const resetWithdrawalToPending = mutation({
+  args: {
+    withdrawalId: v.id("withdrawals"),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.withdrawalId, {
+      status: "pending",
+      txHash: undefined,
+      error: undefined,
+    });
+  },
+});
+
+export const deletePendingAdminWithdrawal = mutation({
+  args: {
+    id: v.id("pendingAdminWithdrawals"),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.delete(args.id);
+  },
+});
+
 export const findMismatchedUsers = query({
   handler: async (ctx) => {
     const users = await ctx.db.query("users").collect();

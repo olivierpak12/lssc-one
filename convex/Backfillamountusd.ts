@@ -115,3 +115,28 @@ export const backfillAll = mutation({
     };
   },
 });
+
+// ─── One-time backfill — pendingAdminWithdrawals ──────────────────────────────
+
+export const backfillPendingAdminWithdrawalsAmountUsd = mutation({
+  args: {},
+  handler: async (ctx): Promise<{ message: string; updated: number; skipped: number }> => {
+    const records = await ctx.db.query("pendingAdminWithdrawals").collect();
+    let updated = 0;
+    let skipped = 0;
+
+    for (const record of records) {
+      if ((record as any).amountUsd !== undefined) { skipped++; continue; }
+      try {
+        const amountUsd = Number(BigInt(record.amount)) / 1_000_000;
+        await ctx.db.patch(record._id, { amountUsd } as any);
+        updated++;
+      } catch (err) {
+        console.error(`Failed to patch pendingAdminWithdrawal ${record._id}: ${err}`);
+        skipped++;
+      }
+    }
+
+    return { message: "Pending admin withdrawals backfill complete.", updated, skipped };
+  },
+});
